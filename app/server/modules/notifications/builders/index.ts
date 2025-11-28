@@ -23,6 +23,8 @@ export function buildShoutrrrUrl(config: NotificationConfig): string {
 			return buildPushoverShoutrrrUrl(config);
 		case "custom":
 			return buildCustomShoutrrrUrl(config);
+		case "telegram":
+			return require("./telegram").buildTelegramShoutrrrUrl(config);
 		default: {
 			// TypeScript exhaustiveness check
 			const _exhaustive: never = config;

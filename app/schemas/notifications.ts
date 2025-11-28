@@ -1,5 +1,6 @@
 import { type } from "arktype";
 
+
 export const NOTIFICATION_TYPES = {
 	email: "email",
 	slack: "slack",
@@ -8,7 +9,13 @@ export const NOTIFICATION_TYPES = {
 	ntfy: "ntfy",
 	pushover: "pushover",
 	custom: "custom",
+	telegram: "telegram",
 } as const;
+export const telegramNotificationConfigSchema = type({
+	type: "'telegram'",
+	botToken: "string",
+	chatId: "string",
+});
 
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;
 
@@ -69,13 +76,15 @@ export const customNotificationConfigSchema = type({
 	shoutrrrUrl: "string",
 });
 
+
 export const notificationConfigSchema = emailNotificationConfigSchema
 	.or(slackNotificationConfigSchema)
 	.or(discordNotificationConfigSchema)
 	.or(gotifyNotificationConfigSchema)
 	.or(ntfyNotificationConfigSchema)
 	.or(pushoverNotificationConfigSchema)
-	.or(customNotificationConfigSchema);
+	.or(customNotificationConfigSchema)
+	.or(telegramNotificationConfigSchema);
 
 export type NotificationConfig = typeof notificationConfigSchema.infer;
 

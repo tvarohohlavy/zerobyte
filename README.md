@@ -357,9 +357,21 @@ Secrets/credentials in the config file can reference environment variables using
       }
     }
     ```
+
+  - **Telegram**
+    ```json
+    {
+      "name": "telegram-backups",
+      "type": "telegram",
+      "config": {
+        "botToken": "${TELEGRAM_BOT_TOKEN}",
+        "chatId": "${TELEGRAM_CHAT_ID}"
+      }
+    }
+    ```
 - **Fields:**
   - `name`: Unique name for the notification config
-  - `type`: Notification type (email, slack, discord, gotify, ntfy, pushover, custom)
+  - `type`: Notification type (email, slack, discord, gotify, ntfy, pushover, custom, telegram)
   - `config`: Type-specific config, secrets via `${ENV_VAR}`
 
 ##### Admin Setup (Automated)

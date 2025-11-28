@@ -70,6 +70,11 @@ async function encryptSensitiveFields(config: NotificationConfig): Promise<Notif
 				...config,
 				shoutrrrUrl: await cryptoUtils.encrypt(config.shoutrrrUrl),
 			};
+		case "telegram":
+			return {
+				...config,
+				botToken: await cryptoUtils.encrypt(config.botToken),
+			};
 		default:
 			return config;
 	}
@@ -111,6 +116,11 @@ async function decryptSensitiveFields(config: NotificationConfig): Promise<Notif
 			return {
 				...config,
 				shoutrrrUrl: await cryptoUtils.decrypt(config.shoutrrrUrl),
+			};
+		case "telegram":
+			return {
+				...config,
+				botToken: await cryptoUtils.decrypt(config.botToken),
 			};
 		default:
 			return config;
