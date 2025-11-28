@@ -1,14 +1,50 @@
 {
   "volumes": [
     {
-      "name": "data",
+      "name": "local-volume",
       "config": {
-        "backend": "local",
-        "path": "/data"
+        "backend": "directory",
+        "path": "/mydata",
+        "readOnly": true
+      }
+    },
+    {
+      "name": "smb-volume",
+      "config": {
+        "backend": "smb",
+        "server": "smb.example.com",
+        "share": "shared",
+        "username": "user",
+        "password": "${SMB_PASSWORD}",
+        "vers": "3.0",
+        "domain": "WORKGROUP",
+        "port": 445,
+        "readOnly": false
+      }
+    },
+    {
+      "name": "webdav-volume",
+      "config": {
+        "backend": "webdav",
+        "server": "webdav.example.com",
+        "path": "/remote.php/webdav",
+        "username": "user",
+        "password": "${WEBDAV_PASSWORD}",
+        "port": 80,
+        "readOnly": false,
+        "ssl": true
       }
     }
   ],
   "repositories": [
+    {
+      "name": "local-repo",
+      "config": {
+        "backend": "local",
+        "path": "/var/lib/zerobyte/repositories"
+      },
+      "compressionMode": "auto"
+    },
     {
       "name": "backup-repo",
       "config": {
@@ -18,6 +54,32 @@
         "secretAccessKey": "${SECRET_ACCESS_KEY}"
       },
       "compressionMode": "auto"
+    },
+    {
+      "name": "gcs-repo",
+      "config": {
+        "backend": "gcs",
+        "bucket": "mybucket",
+        "projectId": "my-gcp-project",
+        "credentialsJson": "${GCS_CREDENTIALS}"
+      }
+    },
+    {
+      "name": "azure-repo",
+      "config": {
+        "backend": "azure",
+        "container": "mycontainer",
+        "accountName": "myaccount",
+        "accountKey": "${AZURE_KEY}"
+      }
+    },
+    {
+      "name": "rclone-repo",
+      "config": {
+        "backend": "rclone",
+        "remote": "myremote",
+        "path": "backups/zerobyte"
+      }
     }
   ]
 }

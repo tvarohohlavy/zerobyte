@@ -12,7 +12,7 @@ import { BackupExecutionJob } from "../../jobs/backup-execution";
 import { CleanupSessionsJob } from "../../jobs/cleanup-sessions";
 
 export const startup = async () => {
-		// --- New: Read config file and interpolate env vars ---
+		// --- Read config file and interpolate env vars ---
 		let configFileVolumes = [];
 		let configFileRepositories = [];
 		try {
@@ -48,33 +48,30 @@ export const startup = async () => {
 		logger.error(`Error ensuring restic passfile exists: ${err.message}`);
 	});
 
-	// --- New: Initialize volumes and repositories from env/config ---
-	// Volumes: expects JSON array in VOLUMES_CONFIG env
-	// Repositories: expects JSON array in REPOSITORIES_CONFIG env
-	// Use config file first, then env vars
+	// --- Initialize volumes and repositories from config file ---
 	try {
-		const volumes = configFileVolumes.length ? configFileVolumes : (process.env.VOLUMES_CONFIG ? JSON.parse(process.env.VOLUMES_CONFIG) : []);
-		for (const v of volumes) {
+		for (const v of configFileVolumes) {
 			try {
 				await volumeService.createVolume(v.name, v.config);
 				logger.info(`Initialized volume from config: ${v.name}`);
 			} catch (e) {
-				logger.warn(`Volume ${v.name} not created: ${e.message}`);
+				const err = e instanceof Error ? e : new Error(String(e));
+				logger.warn(`Volume ${v.name} not created: ${err.message}`);
 			}
 		}
-		const repositories = configFileRepositories.length ? configFileRepositories : (process.env.REPOSITORIES_CONFIG ? JSON.parse(process.env.REPOSITORIES_CONFIG) : []);
-		for (const r of repositories) {
+		const repoServiceModule = await import("../repositories/repositories.service");
+		for (const r of configFileRepositories) {
 			try {
-				await import("../repositories/repositories.service").then(async (repoService) => {
-					await repoService.createRepository(r.name, r.config, r.compressionMode);
-					logger.info(`Initialized repository from config: ${r.name}`);
-				});
+				await repoServiceModule.repositoriesService.createRepository(r.name, r.config, r.compressionMode);
+				logger.info(`Initialized repository from config: ${r.name}`);
 			} catch (e) {
-				logger.warn(`Repository ${r.name} not created: ${e.message}`);
+				const err = e instanceof Error ? e : new Error(String(e));
+				logger.warn(`Repository ${r.name} not created: ${err.message}`);
 			}
 		}
 	} catch (e) {
-		logger.error(`Failed to initialize volumes/repositories from config: ${e.message}`);
+		const err = e instanceof Error ? e : new Error(String(e));
+		logger.error(`Failed to initialize volumes/repositories from config: ${err.message}`);
 	}
 	// --- End new ---
 

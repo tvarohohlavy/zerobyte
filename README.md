@@ -61,38 +61,152 @@ services:
 
 ### Configure Volumes and Repositories via Config File
 
+
 You can pre-configure backup sources (volumes) and destinations (repositories) using a config file (`zerobyte.config.json` by default, or set `ZEROBYTE_CONFIG_PATH`).
 
 Secrets/credentials in the config file can reference environment variables using `${VAR_NAME}` syntax for secure injection.
 
-Example `zerobyte.config.json`:
+#### zerobyte.config.json Structure
+
 ```json
 {
   "volumes": [
-    {
-      "name": "data",
-      "config": {
-        "backend": "local",
-        "path": "/data"
-      }
-    }
+    // Array of volume objects. Each must have a unique "name" and a "config" matching one of the types below.
   ],
   "repositories": [
-    {
-      "name": "backup-repo",
-      "config": {
-        "backend": "s3",
-        "bucket": "mybucket",
-        "accessKeyId": "${ACCESS_KEY_ID}",
-        "secretAccessKey": "${SECRET_ACCESS_KEY}"
-      },
-      "compressionMode": "auto"
-    }
+    // Array of repository objects. Each must have a unique "name" and a "config" matching one of the types below.
+    // Optionally, "compressionMode" ("auto", "off", "max")
   ]
 }
 ```
 
-You can still use the environment variables `VOLUMES_CONFIG` and `REPOSITORIES_CONFIG` for direct JSON configuration if preferred.
+##### Volume Types
+
+- **Local Directory**
+  ```json
+  {
+    "name": "local-volume",
+    "config": {
+      "backend": "directory",
+      "path": "/data",
+      "readOnly": true
+    }
+  }
+  ```
+
+- **NFS**
+  ```json
+  {
+    "name": "nfs-volume",
+    "config": {
+      "backend": "nfs",
+      "server": "nfs.example.com",
+      "exportPath": "/data",
+      "port": 2049,
+      "version": "4",
+      "readOnly": false
+    }
+  }
+  ```
+
+- **SMB**
+  ```json
+  {
+    "name": "smb-volume",
+    "config": {
+      "backend": "smb",
+      "server": "smb.example.com",
+      "share": "shared",
+      "username": "user",
+      "password": "${SMB_PASSWORD}",
+      "vers": "3.0",
+      "domain": "WORKGROUP",
+      "port": 445,
+      "readOnly": false
+    }
+  }
+  ```
+
+- **WebDAV**
+  ```json
+  {
+    "name": "webdav-volume",
+    "config": {
+      "backend": "webdav",
+      "server": "webdav.example.com",
+      "path": "/remote.php/webdav",
+      "username": "user",
+      "password": "${WEBDAV_PASSWORD}",
+      "port": 80,
+      "readOnly": false,
+      "ssl": true
+    }
+  }
+  ```
+
+##### Repository Types
+
+- **Local Directory**
+  ```json
+  {
+    "name": "local-repo",
+    "config": {
+      "backend": "local",
+      "path": "/var/lib/zerobyte/repositories"
+    },
+    "compressionMode": "auto"
+  }
+  ```
+
+- **S3-Compatible**
+  ```json
+  {
+    "name": "backup-repo",
+    "config": {
+      "backend": "s3",
+      "bucket": "mybucket",
+      "accessKeyId": "${ACCESS_KEY_ID}",
+      "secretAccessKey": "${SECRET_ACCESS_KEY}"
+    },
+    "compressionMode": "auto"
+  }
+  ```
+
+- **Google Cloud Storage**
+  ```json
+  {
+    "name": "gcs-repo",
+    "config": {
+      "backend": "gcs",
+      "bucket": "mybucket",
+      "projectId": "my-gcp-project",
+      "credentialsJson": "${GCS_CREDENTIALS}"
+    }
+  }
+  ```
+
+- **Azure Blob Storage**
+  ```json
+  {
+    "name": "azure-repo",
+    "config": {
+      "backend": "azure",
+      "container": "mycontainer",
+      "accountName": "myaccount",
+      "accountKey": "${AZURE_KEY}"
+    }
+  }
+  ```
+
+- **WebDAV, rclone, SFTP, REST, etc.**
+  (See documentation for required fields; all support env variable secrets.)
+
+---
+
+**Notes:**
+- All secrets (passwords, keys) can use `${ENV_VAR}` syntax to inject from environment variables.
+- All paths must be accessible inside the container (mount host paths as needed).
+- `readOnly` is supported for all volume types that allow it, including local directories.
 
 ```yaml
 services:
@@ -111,6 +225,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /var/lib/zerobyte:/var/lib/zerobyte
+      - ./zerobyte.config.json:/app/zerobyte.config.json:ro # Mount your config file
 ```
 
 > [!WARNING]
