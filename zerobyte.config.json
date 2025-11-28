@@ -9,6 +9,17 @@
       }
     },
     {
+      "name": "nfs-volume",
+      "config": {
+        "backend": "nfs",
+        "server": "nfs.example.com",
+        "exportPath": "/data",
+        "port": 2049,
+        "version": "4",
+        "readOnly": false
+      }
+    },
+    {
       "name": "smb-volume",
       "config": {
         "backend": "smb",
@@ -34,6 +45,19 @@
         "readOnly": false,
         "ssl": true
       }
+    },
+    {
+      "name": "sftp-volume",
+      "config": {
+        "backend": "sftp",
+        "host": "sftp.example.com",
+        "port": 22,
+        "username": "user",
+        "password": "${SFTP_PASSWORD}",
+        "privateKey": "${SFTP_PRIVATE_KEY}",
+        "path": "/data",
+        "readOnly": false
+      }
     }
   ],
   "repositories": [
@@ -46,7 +70,7 @@
       "compressionMode": "auto"
     },
     {
-      "name": "backup-repo",
+      "name": "s3-repo",
       "config": {
         "backend": "s3",
         "bucket": "mybucket",
@@ -79,6 +103,115 @@
         "backend": "rclone",
         "remote": "myremote",
         "path": "backups/zerobyte"
+      }
+    },
+    {
+      "name": "webdav-repo",
+      "config": {
+        "backend": "webdav",
+        "server": "webdav.example.com",
+        "path": "/remote.php/webdav",
+        "username": "user",
+        "password": "${WEBDAV_PASSWORD}",
+        "port": 80,
+        "ssl": true
+      }
+    },
+    {
+      "name": "sftp-repo",
+      "config": {
+        "backend": "sftp",
+        "host": "sftp.example.com",
+        "port": 22,
+        "username": "user",
+        "password": "${SFTP_PASSWORD}",
+        "privateKey": "${SFTP_PRIVATE_KEY}",
+        "path": "/backups"
+      }
+    }
+  ],
+  "backupSchedules": [
+    {
+      "volume": "local-volume",
+      "repository": "local-repo",
+      "cronExpression": "0 2 * * *",
+      "retentionPolicy": { "keepLast": 7, "keepDaily": 7 },
+      "includePatterns": ["important-folder"],
+      "excludePatterns": ["*.tmp", "*.log"],
+      "enabled": true,
+      "notifications": ["slack-alerts", "email-admin", "discord-backups", "gotify-notify", "ntfy-notify", "pushover-notify", "custom-shoutrrr"]
+    }
+  ],
+  "notificationDestinations": [
+    {
+      "name": "slack-alerts",
+      "type": "slack",
+      "config": {
+        "webhookUrl": "${SLACK_WEBHOOK_URL}",
+        "channel": "#backups",
+        "username": "zerobyte",
+        "iconEmoji": ":floppy_disk:"
+      }
+    },
+    {
+      "name": "email-admin",
+      "type": "email",
+      "config": {
+        "smtpHost": "smtp.example.com",
+        "smtpPort": 587,
+        "username": "admin@example.com",
+        "password": "${EMAIL_PASSWORD}",
+        "from": "zerobyte@example.com",
+        "to": ["admin@example.com"],
+        "useTLS": true
+      }
+    },
+    {
+      "name": "discord-backups",
+      "type": "discord",
+      "config": {
+        "webhookUrl": "${DISCORD_WEBHOOK_URL}",
+        "username": "zerobyte",
+        "avatarUrl": "https://example.com/avatar.png",
+        "threadId": "1234567890"
+      }
+    },
+    {
+      "name": "gotify-notify",
+      "type": "gotify",
+      "config": {
+        "serverUrl": "https://gotify.example.com",
+        "token": "${GOTIFY_TOKEN}",
+        "path": "/message",
+        "priority": 5
+      }
+    },
+    {
+      "name": "ntfy-notify",
+      "type": "ntfy",
+      "config": {
+        "serverUrl": "https://ntfy.example.com",
+        "topic": "zerobyte-backups",
+        "priority": "high",
+        "username": "ntfyuser",
+        "password": "${NTFY_PASSWORD}"
+      }
+    },
+    {
+      "name": "pushover-notify",
+      "type": "pushover",
+      "config": {
+        "userKey": "${PUSHOVER_USER_KEY}",
+        "apiToken": "${PUSHOVER_API_TOKEN}",
+        "devices": "phone,tablet",
+        "priority": 1
+      }
+    },
+    {
+      "name": "custom-shoutrrr",
+      "type": "custom",
+      "config": {
+        "shoutrrrUrl": "${SHOUTRRR_URL}"
       }
     }
   ]

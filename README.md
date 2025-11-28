@@ -76,6 +76,43 @@ Secrets/credentials in the config file can reference environment variables using
   "repositories": [
     // Array of repository objects. Each must have a unique "name" and a "config" matching one of the types below.
     // Optionally, "compressionMode" ("auto", "off", "max")
+  ],
+  "backupSchedules": [
+    {
+      "volume": "local-volume",
+      "repository": "local-repo",
+      "cronExpression": "0 2 * * *",
+      "retentionPolicy": { "keepLast": 7, "keepDaily": 7 },
+      "includePatterns": ["important-folder"],
+      "excludePatterns": ["*.tmp", "*.log"],
+      "enabled": true,
+      "notifications": ["slack-alerts", "email-admin"]
+    }
+  ],
+  "notificationDestinations": [
+    {
+      "name": "slack-alerts",
+      "type": "slack",
+      "config": {
+        "webhookUrl": "${SLACK_WEBHOOK_URL}",
+        "channel": "#backups",
+        "username": "zerobyte",
+        "iconEmoji": ":floppy_disk:"
+      }
+    },
+    {
+      "name": "email-admin",
+      "type": "email",
+      "config": {
+        "smtpHost": "smtp.example.com",
+        "smtpPort": 587,
+        "username": "admin@example.com",
+        "password": "${EMAIL_PASSWORD}",
+        "from": "zerobyte@example.com",
+        "to": ["admin@example.com"],
+        "useTLS": true
+      }
+    }
   ]
 }
 ```
@@ -200,6 +237,130 @@ Secrets/credentials in the config file can reference environment variables using
 
 - **WebDAV, rclone, SFTP, REST, etc.**
   (See documentation for required fields; all support env variable secrets.)
+
+##### Backup Schedules
+
+- **Example:**
+  ```json
+  {
+    "volume": "local-volume",
+    "repository": "local-repo",
+    "cronExpression": "0 2 * * *",
+    "retentionPolicy": { "keepLast": 7, "keepDaily": 7 },
+    "includePatterns": ["important-folder"],
+    "excludePatterns": ["*.tmp", "*.log"],
+    "enabled": true,
+    "notifications": ["slack-alerts", "email-admin"]
+  }
+  ```
+- **Fields:**
+  - `volume`: Name of the source volume
+  - `repository`: Name of the destination repository
+  - `cronExpression`: Cron string for schedule
+  - `retentionPolicy`: Object with retention rules (e.g., keepLast, keepDaily)
+  - `includePatterns`/`excludePatterns`: Arrays of patterns
+  - `enabled`: Boolean
+  - `notifications`: Array of notification destination names
+
+##### Notification Destinations
+
+- **Examples:**
+  - **Slack**
+    ```json
+    {
+      "name": "slack-alerts",
+      "type": "slack",
+      "config": {
+        "webhookUrl": "${SLACK_WEBHOOK_URL}",
+        "channel": "#backups",
+        "username": "zerobyte",
+        "iconEmoji": ":floppy_disk:"
+      }
+    }
+    ```
+  - **Email**
+    ```json
+    {
+      "name": "email-admin",
+      "type": "email",
+      "config": {
+        "smtpHost": "smtp.example.com",
+        "smtpPort": 587,
+        "username": "admin@example.com",
+        "password": "${EMAIL_PASSWORD}",
+        "from": "zerobyte@example.com",
+        "to": ["admin@example.com"],
+        "useTLS": true
+      }
+    }
+    ```
+  - **Discord**
+    ```json
+    {
+      "name": "discord-backups",
+      "type": "discord",
+      "config": {
+        "webhookUrl": "${DISCORD_WEBHOOK_URL}",
+        "username": "zerobyte",
+        "avatarUrl": "https://example.com/avatar.png",
+        "threadId": "1234567890"
+      }
+    }
+    ```
+  - **Gotify**
+    ```json
+    {
+      "name": "gotify-notify",
+      "type": "gotify",
+      "config": {
+        "serverUrl": "https://gotify.example.com",
+        "token": "${GOTIFY_TOKEN}",
+        "path": "/message",
+        "priority": 5
+      }
+    }
+    ```
+  - **ntfy**
+    ```json
+    {
+      "name": "ntfy-notify",
+      "type": "ntfy",
+      "config": {
+        "serverUrl": "https://ntfy.example.com",
+        "topic": "zerobyte-backups",
+        "priority": "high",
+        "username": "ntfyuser",
+        "password": "${NTFY_PASSWORD}"
+      }
+    }
+    ```
+  - **Pushover**
+    ```json
+    {
+      "name": "pushover-notify",
+      "type": "pushover",
+      "config": {
+        "userKey": "${PUSHOVER_USER_KEY}",
+        "apiToken": "${PUSHOVER_API_TOKEN}",
+        "devices": "phone,tablet",
+        "priority": 1
+      }
+    }
+    ```
+  - **Custom (shoutrrr)**
+    ```json
+    {
+      "name": "custom-shoutrrr",
+      "type": "custom",
+      "config": {
+        "shoutrrrUrl": "${SHOUTRRR_URL}"
+      }
+    }
+    ```
+- **Fields:**
+  - `name`: Unique name for the notification config
+  - `type`: Notification type (email, slack, discord, gotify, ntfy, pushover, custom)
+  - `config`: Type-specific config, secrets via `${ENV_VAR}`
 
 ---
 

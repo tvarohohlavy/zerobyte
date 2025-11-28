@@ -15,6 +15,8 @@ export const startup = async () => {
 		// --- Read config file and interpolate env vars ---
 		let configFileVolumes = [];
 		let configFileRepositories = [];
+		let configFileBackupSchedules = [];
+		let configFileNotificationDestinations = [];
 		try {
 			const configPath = process.env.ZEROBYTE_CONFIG_PATH || "zerobyte.config.json";
 			const fs = await import("node:fs/promises");
@@ -36,6 +38,8 @@ export const startup = async () => {
 				}
 				configFileVolumes = interpolate(config.volumes || []);
 				configFileRepositories = interpolate(config.repositories || []);
+				configFileBackupSchedules = interpolate(config.backupSchedules || []);
+				configFileNotificationDestinations = interpolate(config.notificationDestinations || []);
 			}
 		} catch (e) {
 			logger.warn(`No config file loaded or error parsing config: ${e.message}`);
@@ -48,7 +52,7 @@ export const startup = async () => {
 		logger.error(`Error ensuring restic passfile exists: ${err.message}`);
 	});
 
-	// --- Initialize volumes and repositories from config file ---
+	// --- Initialize volumes, repositories, backup schedules, notifications from config file ---
 	try {
 		for (const v of configFileVolumes) {
 			try {
@@ -69,9 +73,29 @@ export const startup = async () => {
 				logger.warn(`Repository ${r.name} not created: ${err.message}`);
 			}
 		}
+		const backupServiceModule = await import("../backups/backups.service");
+		for (const s of configFileBackupSchedules) {
+			try {
+				await backupServiceModule.backupsService.createSchedule(s);
+				logger.info(`Initialized backup schedule from config: ${s.cronExpression || s.name}`);
+			} catch (e) {
+				const err = e instanceof Error ? e : new Error(String(e));
+				logger.warn(`Backup schedule not created: ${err.message}`);
+			}
+		}
+		const notificationsServiceModule = await import("../notifications/notifications.service");
+		for (const n of configFileNotificationDestinations) {
+			try {
+				await notificationsServiceModule.notificationsService.createDestination(n.name, n.config);
+				logger.info(`Initialized notification destination from config: ${n.name}`);
+			} catch (e) {
+				const err = e instanceof Error ? e : new Error(String(e));
+				logger.warn(`Notification destination ${n.name} not created: ${err.message}`);
+			}
+		}
 	} catch (e) {
 		const err = e instanceof Error ? e : new Error(String(e));
-		logger.error(`Failed to initialize volumes/repositories from config: ${err.message}`);
+		logger.error(`Failed to initialize from config: ${err.message}`);
 	}
 	// --- End new ---
 

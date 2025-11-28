@@ -197,6 +197,31 @@ export default function ScheduleDetailsPage({ params, loaderData }: Route.Compon
 		}
 	};
 
+	// Export config as JSON file
+	const handleExportConfig = () => {
+		if (!schedule) return;
+		const configData = {
+			id: schedule.id,
+			volume: schedule.volume?.name,
+			repository: schedule.repository?.name,
+			cronExpression: schedule.cronExpression,
+			retentionPolicy: schedule.retentionPolicy,
+			includePatterns: schedule.includePatterns,
+			excludePatterns: schedule.excludePatterns,
+			enabled: schedule.enabled,
+			notifications: schedule.notifications,
+		};
+		const blob = new Blob([JSON.stringify(configData, null, 2)], { type: "application/json" });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = `backup-schedule-${schedule.id}-config.json`;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(url);
+	};
+
 	if (isEditMode) {
 		return (
 			<div>
@@ -225,6 +250,11 @@ export default function ScheduleDetailsPage({ params, loaderData }: Route.Compon
 				setIsEditMode={setIsEditMode}
 				schedule={schedule}
 			/>
+			<div className="flex justify-end mb-2">
+				<Button variant="outline" onClick={handleExportConfig}>
+					Export config
+				</Button>
+			</div>
 			<div className={cn({ hidden: !loaderData.notifs?.length })}>
 				<ScheduleNotificationsConfig scheduleId={schedule.id} destinations={loaderData.notifs ?? []} />
 			</div>

@@ -118,6 +118,27 @@ export default function NotificationDetailsPage({ loaderData }: Route.ComponentP
 		testDestination.mutate({ path: { id: String(data.id) } });
 	};
 
+	// Export config as JSON file
+	const handleExportConfig = () => {
+		if (!data) return;
+		const configData = {
+			id: data.id,
+			name: data.name,
+			type: data.type,
+			enabled: data.enabled,
+			config: data.config,
+		};
+		const blob = new Blob([JSON.stringify(configData, null, 2)], { type: "application/json" });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = `notification-destination-${data.id}-config.json`;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(url);
+	};
+
 	return (
 		<>
 			<div className="flex items-center justify-between mb-4">
@@ -141,6 +162,12 @@ export default function NotificationDetailsPage({ loaderData }: Route.ComponentP
 					>
 						<TestTube2 className="h-4 w-4 mr-2" />
 						Test
+					</Button>
+					<Button
+						onClick={handleExportConfig}
+						variant="outline"
+					>
+						Export config
 					</Button>
 					<Button
 						onClick={() => setShowDeleteConfirm(true)}
