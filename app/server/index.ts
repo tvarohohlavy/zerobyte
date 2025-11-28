@@ -51,7 +51,8 @@ const app = new Hono()
 	.route("/api/v1/backups", backupScheduleController.use(requireAuth))
 	.route("/api/v1/notifications", notificationsController.use(requireAuth))
 	.route("/api/v1/system", systemController.use(requireAuth))
-	.route("/api/v1/events", eventsController.use(requireAuth));
+	.route("/api/v1/events", eventsController.use(requireAuth))
+	.route("/api/v1/config", (await import("./modules/lifecycle/config-export.controller")).configExportController.use(requireAuth));
 
 app.get("/api/v1/openapi.json", generalDescriptor(app));
 app.get("/api/v1/docs", scalarDescriptor);

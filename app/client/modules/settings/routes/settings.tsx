@@ -44,6 +44,26 @@ export async function clientLoader({ context }: Route.LoaderArgs) {
 }
 
 export default function Settings({ loaderData }: Route.ComponentProps) {
+		// Export config handler
+		const handleExportConfig = async () => {
+			try {
+				const res = await fetch("/api/v1/config/export", { credentials: "include" });
+				if (!res.ok) throw new Error("Failed to export config");
+				const data = await res.json();
+				const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+				const url = window.URL.createObjectURL(blob);
+				const a = document.createElement("a");
+				a.href = url;
+				a.download = "zerobyte-full-config.json";
+				document.body.appendChild(a);
+				a.click();
+				document.body.removeChild(a);
+				window.URL.revokeObjectURL(url);
+				toast.success("Config exported successfully");
+			} catch (err) {
+				toast.error("Failed to export config", { description: err instanceof Error ? err.message : String(err) });
+			}
+		};
 	const [currentPassword, setCurrentPassword] = useState("");
 	const [newPassword, setNewPassword] = useState("");
 	const [confirmPassword, setConfirmPassword] = useState("");
@@ -143,6 +163,12 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
 				<CardDescription className="mt-1.5">Your account details</CardDescription>
 			</div>
 			<CardContent className="p-6 space-y-4">
+				<div className="flex justify-end">
+					<Button variant="outline" onClick={handleExportConfig}>
+						<Download size={16} className="mr-2" />
+						Export All Config (JSON)
+					</Button>
+				</div>
 				<div className="space-y-2">
 					<Label>Username</Label>
 					<Input value={loaderData.user?.username || ""} disabled className="max-w-md" />
