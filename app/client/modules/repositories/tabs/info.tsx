@@ -6,6 +6,25 @@ type Props = {
 };
 
 export const RepositoryInfoTabContent = ({ repository }: Props) => {
+	const handleExportConfig = () => {
+		const configData = {
+			name: repository.name,
+			type: repository.type,
+			...repository.config,
+		};
+		const blob = new Blob([JSON.stringify(configData, null, 2)], {
+			type: "application/json",
+		});
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = `${repository.name}-config.json`;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(url);
+	};
+
 	return (
 		<Card className="p-6">
 			<div className="space-y-6">
@@ -57,6 +76,15 @@ export const RepositoryInfoTabContent = ({ repository }: Props) => {
 						<pre className="text-sm overflow-auto">{JSON.stringify(repository.config, null, 2)}</pre>
 					</div>
 				</div>
+			</div>
+			<div className="flex justify-between items-center mb-4">
+				<h3 className="text-lg font-semibold">Repository Information</h3>
+				<button
+					className="px-3 py-1 bg-primary text-white rounded hover:bg-primary/80"
+					onClick={handleExportConfig}
+				>
+					Export config
+				</button>
 			</div>
 		</Card>
 	);

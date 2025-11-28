@@ -55,10 +55,36 @@ export const VolumeInfoTabContent = ({ volume, statfs }: Props) => {
 		}
 	};
 
+	// Export config as JSON file
+	const handleExportConfig = () => {
+		const configData = {
+			name: volume.name,
+			...volume.config,
+		};
+		const blob = new Blob([JSON.stringify(configData, null, 2)], { type: "application/json" });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = `${volume.name}-config.json`;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(url);
+	};
+
 	return (
 		<>
 			<div className="grid gap-4 xl:grid-cols-[minmax(0,2.3fr)_minmax(320px,1fr)]">
 				<Card className="p-6">
+					<div className="flex justify-between items-center mb-4">
+						<h3 className="text-lg font-semibold">Volume Configuration</h3>
+						<button
+							className="px-3 py-1 bg-primary text-white rounded hover:bg-primary/80"
+							onClick={handleExportConfig}
+						>
+							Export config
+						</button>
+					</div>
 					<CreateVolumeForm
 						initialValues={{ ...volume, ...volume.config }}
 						onSubmit={handleSubmit}
