@@ -81,6 +81,11 @@ RUN bun run build
 FROM base AS production
 
 ENV NODE_ENV="production"
+# Backup configuration variables (example, add more as needed)
+ENV BACKUP_RETENTION="${BACKUP_RETENTION:-7d}"
+ENV BACKUP_CRON="${BACKUP_CRON:-0 2 * * *}"
+ENV BACKUP_EXCLUDE="${BACKUP_EXCLUDE:-}"
+ENV BACKUP_INCLUDE="${BACKUP_INCLUDE:-}"
 
 WORKDIR /app
 

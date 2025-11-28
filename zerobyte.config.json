@@ -1,0 +1,23 @@
+{
+  "volumes": [
+    {
+      "name": "data",
+      "config": {
+        "backend": "local",
+        "path": "/data"
+      }
+    }
+  ],
+  "repositories": [
+    {
+      "name": "backup-repo",
+      "config": {
+        "backend": "s3",
+        "bucket": "mybucket",
+        "accessKeyId": "${ACCESS_KEY_ID}",
+        "secretAccessKey": "${SECRET_ACCESS_KEY}"
+      },
+      "compressionMode": "auto"
+    }
+  ]
+}

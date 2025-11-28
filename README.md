@@ -37,6 +37,63 @@ Zerobyte is a backup automation tool that helps you save your data across multip
 
 In order to run Zerobyte, you need to have Docker and Docker Compose installed on your server. Then, you can use the provided `docker-compose.yml` file to start the application.
 
+### Configuration via Environment Variables
+
+You can configure backup automation during deployment using the following environment variables:
+
+- `BACKUP_RETENTION`: Default retention policy for backups (e.g., `7d`)
+- `BACKUP_CRON`: Default cron expression for backup schedule (e.g., `0 2 * * *`)
+- `BACKUP_EXCLUDE`: Comma-separated list of patterns to exclude from backup
+- `BACKUP_INCLUDE`: Comma-separated list of patterns to include in backup
+
+Set these variables in your deployment environment or in your Docker Compose file under the `environment:` section.
+
+Example:
+```yaml
+services:
+  zerobyte:
+    environment:
+      - BACKUP_RETENTION=7d
+      - BACKUP_CRON=0 2 * * *
+      - BACKUP_EXCLUDE=*.tmp,*.log
+      - BACKUP_INCLUDE=important-folder
+```
+
+### Configure Volumes and Repositories via Config File
+
+You can pre-configure backup sources (volumes) and destinations (repositories) using a config file (`zerobyte.config.json` by default, or set `ZEROBYTE_CONFIG_PATH`).
+
+Secrets/credentials in the config file can reference environment variables using `${VAR_NAME}` syntax for secure injection.
+
+Example `zerobyte.config.json`:
+```json
+{
+  "volumes": [
+    {
+      "name": "data",
+      "config": {
+        "backend": "local",
+        "path": "/data"
+      }
+    }
+  ],
+  "repositories": [
+    {
+      "name": "backup-repo",
+      "config": {
+        "backend": "s3",
+        "bucket": "mybucket",
+        "accessKeyId": "${ACCESS_KEY_ID}",
+        "secretAccessKey": "${SECRET_ACCESS_KEY}"
+      },
+      "compressionMode": "auto"
+    }
+  ]
+}
+```
+
+You can still use the environment variables `VOLUMES_CONFIG` and `REPOSITORIES_CONFIG` for direct JSON configuration if preferred.
+
 ```yaml
 services:
   zerobyte:
