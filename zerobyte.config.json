@@ -214,5 +214,10 @@
         "shoutrrrUrl": "${SHOUTRRR_URL}"
       }
     }
-  ]
+  ],
+  "admin": {
+    "username": "admin",
+    "password": "${ADMIN_PASSWORD}",
+    "recoveryKeyPath": "/var/lib/zerobyte/recovery.key"
+  }
 }

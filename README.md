@@ -362,6 +362,25 @@ Secrets/credentials in the config file can reference environment variables using
   - `type`: Notification type (email, slack, discord, gotify, ntfy, pushover, custom)
   - `config`: Type-specific config, secrets via `${ENV_VAR}`
 
+##### Admin Setup (Automated)
+
+- **Example:**
+  ```json
+  {
+    "admin": {
+      "username": "admin",
+      "password": "${ADMIN_PASSWORD}",
+      "recoveryKeyPath": "/var/lib/zerobyte/recovery.key"
+    }
+  }
+  ```
+- **Fields:**
+  - `username`: Admin username to create on first startup
+  - `password`: Admin password (can use `${ENV_VAR}`)
+  - `recoveryKeyPath`: Path to save the recovery key (mandatory)
+
+**On first startup, Zerobyte will automatically create the admin user and save the recovery key to the specified path.**
+
 ---
 
 **Notes:**

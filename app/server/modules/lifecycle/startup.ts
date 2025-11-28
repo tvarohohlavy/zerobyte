@@ -17,6 +17,7 @@ export const startup = async () => {
 		let configFileRepositories = [];
 		let configFileBackupSchedules = [];
 		let configFileNotificationDestinations = [];
+	    let configFileAdmin = null;
 		try {
 			const configPath = process.env.ZEROBYTE_CONFIG_PATH || "zerobyte.config.json";
 			const fs = await import("node:fs/promises");
@@ -40,6 +41,7 @@ export const startup = async () => {
 				configFileRepositories = interpolate(config.repositories || []);
 				configFileBackupSchedules = interpolate(config.backupSchedules || []);
 				configFileNotificationDestinations = interpolate(config.notificationDestinations || []);
+	            configFileAdmin = interpolate(config.admin || null);
 			}
 		} catch (e) {
 			logger.warn(`No config file loaded or error parsing config: ${e.message}`);
@@ -93,6 +95,33 @@ export const startup = async () => {
 				logger.warn(`Notification destination ${n.name} not created: ${err.message}`);
 			}
 		}
+        // --- Automated admin setup and recovery key generation ---
+        try {
+            const { authService } = await import("../auth/auth.service");
+            const fs = await import("node:fs/promises");
+            if (configFileAdmin && configFileAdmin.username && configFileAdmin.password && configFileAdmin.recoveryKeyPath) {
+                const hasUsers = await authService.hasUsers();
+                if (!hasUsers) {
+                    // Register admin user
+                    await authService.register(configFileAdmin.username, configFileAdmin.password);
+                    logger.info(`Admin user '${configFileAdmin.username}' created from config.`);
+                    // Write recovery key
+                    try {
+                        const resticPassPath = require("../../core/constants").RESTIC_PASS_FILE;
+                        const recoveryKey = await fs.readFile(resticPassPath, "utf-8");
+                        await fs.mkdir(require("node:path").dirname(configFileAdmin.recoveryKeyPath), { recursive: true });
+                        await fs.writeFile(configFileAdmin.recoveryKeyPath, recoveryKey, { mode: 0o600 });
+                        logger.info(`Recovery key written to ${configFileAdmin.recoveryKeyPath}`);
+                    } catch (err) {
+                        logger.error(`Failed to write recovery key: ${err.message}`);
+                    }
+                }
+            } else {
+                logger.warn("Admin config missing required fields (username, password, recoveryKeyPath). Skipping automated admin setup.");
+            }
+        } catch (err) {
+            logger.error(`Automated admin setup failed: ${err.message}`);
+        }
 	} catch (e) {
 		const err = e instanceof Error ? e : new Error(String(e));
 		logger.error(`Failed to initialize from config: ${err.message}`);
