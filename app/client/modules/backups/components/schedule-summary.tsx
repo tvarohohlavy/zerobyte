@@ -26,11 +26,11 @@ type Props = {
 	handleStopBackup: () => void;
 	handleDeleteSchedule: () => void;
 	setIsEditMode: (isEdit: boolean) => void;
+    notificationDestinations?: Array<{ name: string; config: any; type?: string }>;
 };
 
 export const ScheduleSummary = (props: Props) => {
-	const { schedule, handleToggleEnabled, handleRunBackupNow, handleStopBackup, handleDeleteSchedule, setIsEditMode } =
-		props;
+	const { schedule, handleToggleEnabled, handleRunBackupNow, handleStopBackup, handleDeleteSchedule, setIsEditMode, notificationDestinations } = props;
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 	const [showForgetConfirm, setShowForgetConfirm] = useState(false);
 
@@ -68,6 +68,12 @@ export const ScheduleSummary = (props: Props) => {
 
 	const handleExportConfig = () => {
 		if (!schedule) return;
+		let assignedNotifs: Array<any> = [];
+		if (notificationDestinations && schedule.notifications) {
+			assignedNotifs = schedule.notifications.map((name: string) =>
+				notificationDestinations.find((n) => n.name === name) ?? { name, config: null }
+			);
+		}
 		const configData = {
 			id: schedule.id,
 			volume: schedule.volume?.name,
@@ -77,7 +83,7 @@ export const ScheduleSummary = (props: Props) => {
 			includePatterns: schedule.includePatterns,
 			excludePatterns: schedule.excludePatterns,
 			enabled: schedule.enabled,
-			notifications: schedule.notifications,
+			notifications: assignedNotifs,
 		};
 		const blob = new Blob([JSON.stringify(configData, null, 2)], { type: "application/json" });
 		const url = URL.createObjectURL(blob);

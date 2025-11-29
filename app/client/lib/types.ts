@@ -15,7 +15,7 @@ export type User = GetMeResponse["user"];
 
 export type Repository = GetRepositoryResponse;
 
-export type BackupSchedule = GetBackupScheduleResponse;
+export type BackupSchedule = GetBackupScheduleResponse & { notifications?: string[] };
 
 export type Snapshot = ListSnapshotsResponse[number];
 

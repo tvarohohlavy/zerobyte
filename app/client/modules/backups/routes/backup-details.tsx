@@ -224,6 +224,7 @@ export default function ScheduleDetailsPage({ params, loaderData }: Route.Compon
 				handleDeleteSchedule={() => deleteSchedule.mutate({ path: { scheduleId: schedule.id.toString() } })}
 				setIsEditMode={setIsEditMode}
 				schedule={schedule}
+				notificationDestinations={loaderData.notifs}
 			/>
 			<div className={cn({ hidden: !loaderData.notifs?.length })}>
 				<ScheduleNotificationsConfig scheduleId={schedule.id} destinations={loaderData.notifs ?? []} />

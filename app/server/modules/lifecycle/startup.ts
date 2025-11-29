@@ -12,7 +12,6 @@ import { BackupExecutionJob } from "../../jobs/backup-execution";
 import { CleanupSessionsJob } from "../../jobs/cleanup-sessions";
 
 export const startup = async () => {
-		// --- Read config file and interpolate env vars ---
 		let configFileVolumes = [];
 		let configFileRepositories = [];
 		let configFileBackupSchedules = [];
@@ -54,7 +53,6 @@ export const startup = async () => {
 		logger.error(`Error ensuring restic passfile exists: ${err.message}`);
 	});
 
-	// --- Initialize volumes, repositories, backup schedules, notifications from config file ---
 	try {
 		for (const v of configFileVolumes) {
 			try {
@@ -75,16 +73,6 @@ export const startup = async () => {
 				logger.warn(`Repository ${r.name} not created: ${err.message}`);
 			}
 		}
-		const backupServiceModule = await import("../backups/backups.service");
-		for (const s of configFileBackupSchedules) {
-			try {
-				await backupServiceModule.backupsService.createSchedule(s);
-				logger.info(`Initialized backup schedule from config: ${s.cronExpression || s.name}`);
-			} catch (e) {
-				const err = e instanceof Error ? e : new Error(String(e));
-				logger.warn(`Backup schedule not created: ${err.message}`);
-			}
-		}
 		const notificationsServiceModule = await import("../notifications/notifications.service");
 		for (const n of configFileNotificationDestinations) {
 			try {
@@ -95,7 +83,17 @@ export const startup = async () => {
 				logger.warn(`Notification destination ${n.name} not created: ${err.message}`);
 			}
 		}
-        // --- Automated admin setup and recovery key generation ---
+		const backupServiceModule = await import("../backups/backups.service");
+		for (const s of configFileBackupSchedules) {
+			try {
+				await backupServiceModule.backupsService.createSchedule(s);
+				logger.info(`Initialized backup schedule from config: ${s.cronExpression || s.name}`);
+			} catch (e) {
+				const err = e instanceof Error ? e : new Error(String(e));
+				logger.warn(`Backup schedule not created: ${err.message}`);
+			}
+		}
+		
         try {
             const { authService } = await import("../auth/auth.service");
             const fs = await import("node:fs/promises");
@@ -107,7 +105,7 @@ export const startup = async () => {
                     logger.info(`Admin user '${configFileAdmin.username}' created from config.`);
                     // Write recovery key
                     try {
-                        const resticPassPath = require("../../core/constants").RESTIC_PASS_FILE;
+						const resticPassPath = require("../core/constants").RESTIC_PASS_FILE;
                         const recoveryKey = await fs.readFile(resticPassPath, "utf-8");
                         await fs.mkdir(require("node:path").dirname(configFileAdmin.recoveryKeyPath), { recursive: true });
                         await fs.writeFile(configFileAdmin.recoveryKeyPath, recoveryKey, { mode: 0o600 });
@@ -126,7 +124,6 @@ export const startup = async () => {
 		const err = e instanceof Error ? e : new Error(String(e));
 		logger.error(`Failed to initialize from config: ${err.message}`);
 	}
-	// --- End new ---
 
 	const volumes = await db.query.volumesTable.findMany({
 		where: or(
