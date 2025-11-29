@@ -71,6 +71,13 @@ const createRepository = async (name: string, config: RepositoryConfig, compress
 
 	const encryptedConfig = await encryptConfig(processedConfig);
 
+	// Check if repository already exists by trying to list snapshots
+	let repoExists = false;
+	let error: string | null = null;
+	await restic.snapshots(encryptedConfig)
+		.then(() => { repoExists = true; })
+		.catch(() => { repoExists = false; });
+
 	const [created] = await db
 		.insert(repositoriesTable)
 		.values({
@@ -88,33 +95,28 @@ const createRepository = async (name: string, config: RepositoryConfig, compress
 		throw new InternalServerError("Failed to create repository");
 	}
 
-	let error: string | null = null;
-
-	if (config.isExistingRepository) {
-		const result = await restic
-			.snapshots(encryptedConfig)
-			.then(() => ({ error: null }))
-			.catch((error) => ({ error }));
-
-		error = result.error;
-	} else {
-		const initResult = await restic.init(encryptedConfig);
-		error = initResult.error;
-	}
-
-	if (!error) {
+	if (repoExists) {
+		// Repository already exists, mark as healthy
 		await db
 			.update(repositoriesTable)
 			.set({ status: "healthy", lastChecked: Date.now(), lastError: null })
 			.where(eq(repositoriesTable.id, id));
-
 		return { repository: created, status: 201 };
+	} else {
+		// Try to initialize repository
+		const initResult = await restic.init(encryptedConfig);
+		error = initResult.error;
+		if (!error) {
+			await db
+				.update(repositoriesTable)
+				.set({ status: "healthy", lastChecked: Date.now(), lastError: null })
+				.where(eq(repositoriesTable.id, id));
+			return { repository: created, status: 201 };
+		}
+		const errorMessage = toMessage(error);
+		await db.delete(repositoriesTable).where(eq(repositoriesTable.id, id));
+		throw new InternalServerError(`Failed to initialize repository: ${errorMessage}`);
 	}
-
-	const errorMessage = toMessage(error);
-	await db.delete(repositoriesTable).where(eq(repositoriesTable.id, id));
-
-	throw new InternalServerError(`Failed to initialize repository: ${errorMessage}`);
 };
 
 const getRepository = async (name: string) => {

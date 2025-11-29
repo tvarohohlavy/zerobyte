@@ -33,47 +33,51 @@ const getDestination = async (id: number) => {
 	return destination;
 };
 
+function isEncrypted(val?: string): boolean {
+    return typeof val === "string" && val.startsWith("enc:");
+}
+
 async function encryptSensitiveFields(config: NotificationConfig): Promise<NotificationConfig> {
 	switch (config.type) {
 		case "email":
 			return {
 				...config,
-				password: await cryptoUtils.encrypt(config.password),
+				password: isEncrypted(config.password) ? config.password : await cryptoUtils.encrypt(config.password),
 			};
 		case "slack":
 			return {
 				...config,
-				webhookUrl: await cryptoUtils.encrypt(config.webhookUrl),
+				webhookUrl: isEncrypted(config.webhookUrl) ? config.webhookUrl : await cryptoUtils.encrypt(config.webhookUrl),
 			};
 		case "discord":
 			return {
 				...config,
-				webhookUrl: await cryptoUtils.encrypt(config.webhookUrl),
+				webhookUrl: isEncrypted(config.webhookUrl) ? config.webhookUrl : await cryptoUtils.encrypt(config.webhookUrl),
 			};
 		case "gotify":
 			return {
 				...config,
-				token: await cryptoUtils.encrypt(config.token),
+				token: isEncrypted(config.token) ? config.token : await cryptoUtils.encrypt(config.token),
 			};
 		case "ntfy":
 			return {
 				...config,
-				password: config.password ? await cryptoUtils.encrypt(config.password) : undefined,
+				password: config.password ? (isEncrypted(config.password) ? config.password : await cryptoUtils.encrypt(config.password)) : undefined,
 			};
 		case "pushover":
 			return {
 				...config,
-				apiToken: await cryptoUtils.encrypt(config.apiToken),
+				apiToken: isEncrypted(config.apiToken) ? config.apiToken : await cryptoUtils.encrypt(config.apiToken),
 			};
 		case "custom":
 			return {
 				...config,
-				shoutrrrUrl: await cryptoUtils.encrypt(config.shoutrrrUrl),
+				shoutrrrUrl: isEncrypted(config.shoutrrrUrl) ? config.shoutrrrUrl : await cryptoUtils.encrypt(config.shoutrrrUrl),
 			};
 		case "telegram":
 			return {
 				...config,
-				botToken: await cryptoUtils.encrypt(config.botToken),
+				botToken: isEncrypted(config.botToken) ? config.botToken : await cryptoUtils.encrypt(config.botToken),
 			};
 		default:
 			return config;

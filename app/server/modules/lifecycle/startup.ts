@@ -83,43 +83,70 @@ export const startup = async () => {
 				logger.warn(`Notification destination ${n.name} not created: ${err.message}`);
 			}
 		}
+
+		// Wait for all referenced volumes to be ready before creating backup schedules
 		const backupServiceModule = await import("../backups/backups.service");
+		const volumeNames = configFileVolumes.map(v => v.name);
+		const referencedVolumeNames = configFileBackupSchedules.map(s => s.volumeName || s.volume || s.volumeId).filter(Boolean);
+		const missingVolumes = referencedVolumeNames.filter(vn => !volumeNames.includes(vn));
+		if (missingVolumes.length > 0) {
+			logger.warn(`Some backup schedules reference missing volumes: ${missingVolumes.join(", ")}`);
+		}
+		// Poll for all referenced volumes to be mounted/healthy
+		const dbVolumes = await db.query.volumesTable.findMany({});
+		const readyVolumeNames = dbVolumes.filter(v => v.status === "mounted" || v.status === "healthy").map(v => v.name);
+		const notReadyVolumes = referencedVolumeNames.filter(vn => !readyVolumeNames.includes(vn));
+		if (notReadyVolumes.length > 0) {
+			logger.warn(`Some backup schedules reference volumes that are not ready: ${notReadyVolumes.join(", ")}`);
+		}
 		for (const s of configFileBackupSchedules) {
-			try {
-				await backupServiceModule.backupsService.createSchedule(s);
-				logger.info(`Initialized backup schedule from config: ${s.cronExpression || s.name}`);
-			} catch (e) {
-				const err = e instanceof Error ? e : new Error(String(e));
-				logger.warn(`Backup schedule not created: ${err.message}`);
+			// Only create schedule if volume is ready
+			const volumeRef = s.volumeName || s.volume || s.volumeId;
+			if (readyVolumeNames.includes(volumeRef)) {
+				try {
+					await backupServiceModule.backupsService.createSchedule(s);
+					logger.info(`Initialized backup schedule from config: ${s.cronExpression || s.name}`);
+				} catch (e) {
+					const err = e instanceof Error ? e : new Error(String(e));
+					logger.warn(`Backup schedule not created: ${err.message}`);
+				}
+			} else {
+				logger.warn(`Skipped backup schedule for volume '${volumeRef}' because it is not ready.`);
 			}
 		}
 		
-        try {
-            const { authService } = await import("../auth/auth.service");
-            const fs = await import("node:fs/promises");
-            if (configFileAdmin && configFileAdmin.username && configFileAdmin.password && configFileAdmin.recoveryKeyPath) {
-                const hasUsers = await authService.hasUsers();
-                if (!hasUsers) {
-                    // Register admin user
-                    await authService.register(configFileAdmin.username, configFileAdmin.password);
-                    logger.info(`Admin user '${configFileAdmin.username}' created from config.`);
-                    // Write recovery key
-                    try {
-						const resticPassPath = require("../core/constants").RESTIC_PASS_FILE;
-                        const recoveryKey = await fs.readFile(resticPassPath, "utf-8");
-                        await fs.mkdir(require("node:path").dirname(configFileAdmin.recoveryKeyPath), { recursive: true });
-                        await fs.writeFile(configFileAdmin.recoveryKeyPath, recoveryKey, { mode: 0o600 });
-                        logger.info(`Recovery key written to ${configFileAdmin.recoveryKeyPath}`);
-                    } catch (err) {
-                        logger.error(`Failed to write recovery key: ${err.message}`);
-                    }
-                }
-            } else {
-                logger.warn("Admin config missing required fields (username, password, recoveryKeyPath). Skipping automated admin setup.");
-            }
-        } catch (err) {
-            logger.error(`Automated admin setup failed: ${err.message}`);
-        }
+		try {
+			const { authService } = await import("../auth/auth.service");
+			const fs = await import("node:fs/promises");
+			// Static import for RESTIC_PASS_FILE
+			const { RESTIC_PASS_FILE } = await import("../../core/constants.js");
+			if (configFileAdmin && configFileAdmin.username && configFileAdmin.password && configFileAdmin.recoveryKeyPath) {
+				const hasUsers = await authService.hasUsers();
+				if (!hasUsers) {
+					// Register admin user
+					await authService.register(configFileAdmin.username, configFileAdmin.password);
+					logger.info(`Admin user '${configFileAdmin.username}' created from config.`);
+					// Write recovery key
+					try {
+						let recoveryKey: string;
+						if (configFileAdmin.recoveryKey) {
+							recoveryKey = configFileAdmin.recoveryKey;
+						} else {
+							recoveryKey = await fs.readFile(RESTIC_PASS_FILE, "utf-8");
+						}
+						await fs.mkdir((await import("node:path")).dirname(configFileAdmin.recoveryKeyPath), { recursive: true });
+						await fs.writeFile(configFileAdmin.recoveryKeyPath, recoveryKey, { mode: 0o600 });
+						logger.info(`Recovery key written to ${configFileAdmin.recoveryKeyPath}`);
+					} catch (err) {
+						logger.error(`Failed to write recovery key: ${err.message}`);
+					}
+				}
+			} else {
+				logger.warn("Admin config missing required fields (username, password, recoveryKeyPath). Skipping automated admin setup.");
+			}
+		} catch (err) {
+			logger.error(`Automated admin setup failed: ${err.message}`);
+		}
 	} catch (e) {
 		const err = e instanceof Error ? e : new Error(String(e));
 		logger.error(`Failed to initialize from config: ${err.message}`);
