@@ -77,14 +77,6 @@ export const RepositoryInfoTabContent = ({ repository }: Props) => {
 					</div>
 				</div>
 			</div>
-				<div className="flex items-center mb-4">
-					<h3 className="text-lg font-semibold flex-1">Repository Information</h3>
-					<div className="flex flex-1 justify-end">
-						<Button variant="outline" onClick={handleExportConfig}>
-							Export config
-						</Button>
-					</div>
-				</div>
 		</Card>
 	);
 };

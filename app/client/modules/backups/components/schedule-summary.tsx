@@ -1,4 +1,4 @@
-import { Eraser, Pencil, Play, Square, Trash2 } from "lucide-react";
+import { Download, Eraser, Pencil, Play, Square, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { OnOff } from "~/client/components/onoff";
 import { Button } from "~/client/components/ui/button";
@@ -66,6 +66,30 @@ export const ScheduleSummary = (props: Props) => {
 		};
 	}, [schedule, schedule.volume.name]);
 
+	const handleExportConfig = () => {
+		if (!schedule) return;
+		const configData = {
+			id: schedule.id,
+			volume: schedule.volume?.name,
+			repository: schedule.repository?.name,
+			cronExpression: schedule.cronExpression,
+			retentionPolicy: schedule.retentionPolicy,
+			includePatterns: schedule.includePatterns,
+			excludePatterns: schedule.excludePatterns,
+			enabled: schedule.enabled,
+			notifications: schedule.notifications,
+		};
+		const blob = new Blob([JSON.stringify(configData, null, 2)], { type: "application/json" });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = `backup-schedule-${schedule.id}-config.json`;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(url);
+	};
+
 	const handleConfirmDelete = () => {
 		setShowDeleteConfirm(false);
 		handleDeleteSchedule();
@@ -124,6 +148,10 @@ export const ScheduleSummary = (props: Props) => {
 						<Button variant="outline" size="sm" onClick={() => setIsEditMode(true)} className="w-full sm:w-auto">
 							<Pencil className="h-4 w-4 mr-2" />
 							<span className="sm:inline">Edit schedule</span>
+						</Button>
+						<Button variant="outline" size="sm" onClick={handleExportConfig} className="w-full sm:w-auto">
+							<Download className="h-4 w-4 mr-2" />
+							<span className="sm:inline">Export config</span>
 						</Button>
 						<Button
 							variant="outline"

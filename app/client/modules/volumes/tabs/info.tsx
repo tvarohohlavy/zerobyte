@@ -76,14 +76,6 @@ export const VolumeInfoTabContent = ({ volume, statfs }: Props) => {
 		   <>
 			   <div className="grid gap-4 xl:grid-cols-[minmax(0,2.3fr)_minmax(320px,1fr)]">
 				   <Card className="p-6">
-					   <div className="flex items-center mb-4">
-						   <h3 className="text-lg font-semibold flex-1">Volume Configuration</h3>
-						   <div className="flex flex-1 justify-end">
-							   <Button variant="outline" onClick={handleExportConfig}>
-								   Export config
-							   </Button>
-						   </div>
-					   </div>
 					<CreateVolumeForm
 						initialValues={{ ...volume, ...volume.config }}
 						onSubmit={handleSubmit}
