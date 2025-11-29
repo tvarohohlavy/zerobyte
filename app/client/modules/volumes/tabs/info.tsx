@@ -72,19 +72,18 @@ export const VolumeInfoTabContent = ({ volume, statfs }: Props) => {
 		URL.revokeObjectURL(url);
 	};
 
-	return (
-		<>
-			<div className="grid gap-4 xl:grid-cols-[minmax(0,2.3fr)_minmax(320px,1fr)]">
-				<Card className="p-6">
-					<div className="flex justify-between items-center mb-4">
-						<h3 className="text-lg font-semibold">Volume Configuration</h3>
-						<button
-							className="px-3 py-1 bg-primary text-white rounded hover:bg-primary/80"
-							onClick={handleExportConfig}
-						>
-							Export config
-						</button>
-					</div>
+	   return (
+		   <>
+			   <div className="grid gap-4 xl:grid-cols-[minmax(0,2.3fr)_minmax(320px,1fr)]">
+				   <Card className="p-6">
+					   <div className="flex items-center mb-4">
+						   <h3 className="text-lg font-semibold flex-1">Volume Configuration</h3>
+						   <div className="flex flex-1 justify-end">
+							   <Button variant="outline" onClick={handleExportConfig}>
+								   Export config
+							   </Button>
+						   </div>
+					   </div>
 					<CreateVolumeForm
 						initialValues={{ ...volume, ...volume.config }}
 						onSubmit={handleSubmit}

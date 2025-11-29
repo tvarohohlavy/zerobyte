@@ -77,15 +77,14 @@ export const RepositoryInfoTabContent = ({ repository }: Props) => {
 					</div>
 				</div>
 			</div>
-			<div className="flex justify-between items-center mb-4">
-				<h3 className="text-lg font-semibold">Repository Information</h3>
-				<button
-					className="px-3 py-1 bg-primary text-white rounded hover:bg-primary/80"
-					onClick={handleExportConfig}
-				>
-					Export config
-				</button>
-			</div>
+				<div className="flex items-center mb-4">
+					<h3 className="text-lg font-semibold flex-1">Repository Information</h3>
+					<div className="flex flex-1 justify-end">
+						<Button variant="outline" onClick={handleExportConfig}>
+							Export config
+						</Button>
+					</div>
+				</div>
 		</Card>
 	);
 };

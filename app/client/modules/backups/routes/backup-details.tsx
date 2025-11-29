@@ -250,11 +250,15 @@ export default function ScheduleDetailsPage({ params, loaderData }: Route.Compon
 				setIsEditMode={setIsEditMode}
 				schedule={schedule}
 			/>
-			<div className="flex justify-end mb-2">
-				<Button variant="outline" onClick={handleExportConfig}>
-					Export config
-				</Button>
-			</div>
+			   <div className="flex justify-end mb-2">
+				   <Button
+					   variant="outline"
+					   className="mt-4"
+					   onClick={handleExportConfig}
+				   >
+					   Export config
+				   </Button>
+			   </div>
 			<div className={cn({ hidden: !loaderData.notifs?.length })}>
 				<ScheduleNotificationsConfig scheduleId={schedule.id} destinations={loaderData.notifs ?? []} />
 			</div>

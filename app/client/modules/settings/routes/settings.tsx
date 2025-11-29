@@ -163,12 +163,16 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
 				<CardDescription className="mt-1.5">Your account details</CardDescription>
 			</div>
 			<CardContent className="p-6 space-y-4">
-				<div className="flex justify-end">
-					<Button variant="outline" onClick={handleExportConfig}>
-						<Download size={16} className="mr-2" />
-						Export All Config (JSON)
-					</Button>
-				</div>
+				   <div className="flex justify-end">
+					   <Button
+						   variant="outline"
+						   className="mt-4"
+						   onClick={handleExportConfig}
+					   >
+						   <Download size={16} className="mr-2" />
+						   Export All Config (JSON)
+					   </Button>
+				   </div>
 				<div className="space-y-2">
 					<Label>Username</Label>
 					<Input value={loaderData.user?.username || ""} disabled className="max-w-md" />
