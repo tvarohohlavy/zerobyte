@@ -55,23 +55,6 @@ export const VolumeInfoTabContent = ({ volume, statfs }: Props) => {
 		}
 	};
 
-	// Export config as JSON file
-	const handleExportConfig = () => {
-		const configData = {
-			name: volume.name,
-			...volume.config,
-		};
-		const blob = new Blob([JSON.stringify(configData, null, 2)], { type: "application/json" });
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement("a");
-		a.href = url;
-		a.download = `${volume.name}-config.json`;
-		document.body.appendChild(a);
-		a.click();
-		document.body.removeChild(a);
-		URL.revokeObjectURL(url);
-	};
-
 	   return (
 		   <>
 			   <div className="grid gap-4 xl:grid-cols-[minmax(0,2.3fr)_minmax(320px,1fr)]">

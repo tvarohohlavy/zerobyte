@@ -6,24 +6,6 @@ type Props = {
 };
 
 export const RepositoryInfoTabContent = ({ repository }: Props) => {
-	const handleExportConfig = () => {
-		const configData = {
-			name: repository.name,
-			type: repository.type,
-			...repository.config,
-		};
-		const blob = new Blob([JSON.stringify(configData, null, 2)], {
-			type: "application/json",
-		});
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement("a");
-		a.href = url;
-		a.download = `${repository.name}-config.json`;
-		document.body.appendChild(a);
-		a.click();
-		document.body.removeChild(a);
-		URL.revokeObjectURL(url);
-	};
 
 	return (
 		<Card className="p-6">

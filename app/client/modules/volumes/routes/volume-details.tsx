@@ -25,6 +25,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "~/client/components/ui/
 import { useSystemInfo } from "~/client/hooks/use-system-info";
 import { getVolume } from "~/client/api-client";
 import type { VolumeStatus } from "~/client/lib/types";
+import { Download, Trash2 } from "lucide-react";
 import {
 	deleteVolumeMutation,
 	getVolumeOptions,
@@ -114,6 +115,22 @@ export default function VolumeDetails({ loaderData }: Route.ComponentProps) {
 		},
 	});
 
+	const handleExportConfig = () => {
+		const configData = {
+			name: volume.name,
+			...volume.config,
+		};
+		const blob = new Blob([JSON.stringify(configData, null, 2)], { type: "application/json" });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = `${volume.name}-config.json`;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(url);
+	};
+
 	const handleConfirmDelete = () => {
 		setShowDeleteConfirm(false);
 		deleteVol.mutate({ path: { name: name ?? "" } });
@@ -160,7 +177,15 @@ export default function VolumeDetails({ loaderData }: Route.ComponentProps) {
 					>
 						Unmount
 					</Button>
+					<Button
+						variant="outline"
+						onClick={handleExportConfig}
+					>
+						<Download className="h-4 w-4 mr-2" />
+						Export config
+					</Button>
 					<Button variant="destructive" onClick={() => setShowDeleteConfirm(true)} disabled={deleteVol.isPending}>
+						<Trash2 className="h-4 w-4 mr-2" />
 						Delete
 					</Button>
 				</div>

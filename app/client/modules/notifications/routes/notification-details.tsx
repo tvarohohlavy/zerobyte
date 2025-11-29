@@ -24,7 +24,7 @@ import { getNotificationDestination } from "~/client/api-client/sdk.gen";
 import type { Route } from "./+types/notification-details";
 import { cn } from "~/client/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "~/client/components/ui/card";
-import { Bell, Download, TestTube2 } from "lucide-react";
+import { Bell, Download, TestTube2, Trash2 } from "lucide-react";
 import { Alert, AlertDescription } from "~/client/components/ui/alert";
 import { CreateNotificationForm, type NotificationFormValues } from "../components/create-notification-form";
 
@@ -167,6 +167,7 @@ export default function NotificationDetailsPage({ loaderData }: Route.ComponentP
 						   onClick={handleExportConfig}
 						   variant="outline"
 					   >
+						   <Download className="h-4 w-4 mr-2" />
 						   Export config
 					   </Button>
 					   <Button
@@ -174,7 +175,7 @@ export default function NotificationDetailsPage({ loaderData }: Route.ComponentP
 						   variant="destructive"
 						   loading={deleteDestination.isPending}
 					   >
-						   <Download className="h-4 w-4 mr-2" />
+						   <Trash2 className="h-4 w-4 mr-2" />
 						   Delete
 					   </Button>
 				   </div>
