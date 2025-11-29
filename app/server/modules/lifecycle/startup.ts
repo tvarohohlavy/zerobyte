@@ -86,33 +86,28 @@ export const startup = async () => {
 
 		// Wait for all referenced volumes to be ready before creating backup schedules
 		const backupServiceModule = await import("../backups/backups.service");
-		const volumeNames = configFileVolumes.map(v => v.name);
-		const referencedVolumeNames = configFileBackupSchedules.map(s => s.volumeName || s.volume || s.volumeId).filter(Boolean);
-		const missingVolumes = referencedVolumeNames.filter(vn => !volumeNames.includes(vn));
-		if (missingVolumes.length > 0) {
-			logger.warn(`Some backup schedules reference missing volumes: ${missingVolumes.join(", ")}`);
-		}
-		// Poll for all referenced volumes to be mounted/healthy
-		const dbVolumes = await db.query.volumesTable.findMany({});
-		const readyVolumeNames = dbVolumes.filter(v => v.status === "mounted" || v.status === "healthy").map(v => v.name);
-		const notReadyVolumes = referencedVolumeNames.filter(vn => !readyVolumeNames.includes(vn));
-		if (notReadyVolumes.length > 0) {
-			logger.warn(`Some backup schedules reference volumes that are not ready: ${notReadyVolumes.join(", ")}`);
-		}
 		for (const s of configFileBackupSchedules) {
-			// Only create schedule if volume is ready
-			const volumeRef = s.volumeName || s.volume || s.volumeId;
-			if (readyVolumeNames.includes(volumeRef)) {
+			const volume = await db.query.volumesTable.findFirst({
+				where: eq(volumesTable.name, s.volumeName),
+			});
+			if (volume && volume.status !== "mounted") {
 				try {
-					await backupServiceModule.backupsService.createSchedule(s);
-					logger.info(`Initialized backup schedule from config: ${s.cronExpression || s.name}`);
+					await volumeService.mountVolume(volume.name);
+					logger.info(`Mounted volume ${volume.name} for backup schedule ${s.cronExpression || s.name}`);
 				} catch (e) {
 					const err = e instanceof Error ? e : new Error(String(e));
-					logger.warn(`Backup schedule not created: ${err.message}`);
+					logger.warn(`Could not mount volume ${volume.name} for backup schedule ${s.cronExpression || s.name}: ${err.message}`);
+					continue;
 				}
-			} else {
-				logger.warn(`Skipped backup schedule for volume '${volumeRef}' because it is not ready.`);
 			}
+			try {
+				await backupServiceModule.backupsService.createSchedule(s);
+				logger.info(`Initialized backup schedule from config: ${s.cronExpression || s.name}`);
+			} catch (e) {
+				const err = e instanceof Error ? e : new Error(String(e));
+				logger.warn(`Backup schedule not created: ${err.message}`);
+			}
+
 		}
 		
 		try {
@@ -120,29 +115,30 @@ export const startup = async () => {
 			const fs = await import("node:fs/promises");
 			// Static import for RESTIC_PASS_FILE
 			const { RESTIC_PASS_FILE } = await import("../../core/constants.js");
-			if (configFileAdmin && configFileAdmin.username && configFileAdmin.password && configFileAdmin.recoveryKeyPath) {
+			if (configFileAdmin && configFileAdmin.username && configFileAdmin.password) {
 				const hasUsers = await authService.hasUsers();
 				if (!hasUsers) {
 					// Register admin user
-					await authService.register(configFileAdmin.username, configFileAdmin.password);
+					const { user } = await authService.register(configFileAdmin.username, configFileAdmin.password);
 					logger.info(`Admin user '${configFileAdmin.username}' created from config.`);
 					// Write recovery key
 					try {
 						let recoveryKey: string;
 						if (configFileAdmin.recoveryKey) {
 							recoveryKey = configFileAdmin.recoveryKey;
+							// Mark as downloaded so UI does not prompt
+							await db.update(usersTable).set({ hasDownloadedResticPassword: true }).where(eq(usersTable.id, user.id));
 						} else {
 							recoveryKey = await fs.readFile(RESTIC_PASS_FILE, "utf-8");
 						}
-						await fs.mkdir((await import("node:path")).dirname(configFileAdmin.recoveryKeyPath), { recursive: true });
-						await fs.writeFile(configFileAdmin.recoveryKeyPath, recoveryKey, { mode: 0o600 });
-						logger.info(`Recovery key written to ${configFileAdmin.recoveryKeyPath}`);
+						await fs.writeFile(RESTIC_PASS_FILE, recoveryKey, { mode: 0o600 });
+						logger.info(`Recovery key written to ${RESTIC_PASS_FILE}`);
 					} catch (err) {
 						logger.error(`Failed to write recovery key: ${err.message}`);
 					}
 				}
 			} else {
-				logger.warn("Admin config missing required fields (username, password, recoveryKeyPath). Skipping automated admin setup.");
+				logger.warn("Admin config missing required fields (username, password). Skipping automated admin setup.");
 			}
 		} catch (err) {
 			logger.error(`Automated admin setup failed: ${err.message}`);

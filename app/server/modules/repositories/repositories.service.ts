@@ -106,7 +106,9 @@ const createRepository = async (name: string, config: RepositoryConfig, compress
 		// Try to initialize repository
 		const initResult = await restic.init(encryptedConfig);
 		error = initResult.error;
-		if (!error) {
+		// Treat 'config file already exists' as success
+		const alreadyExistsMsg = "config file already exists";
+		if (!error || (typeof error === "object" && error.message && error.message.includes(alreadyExistsMsg)) || (typeof error === "string" && error.includes(alreadyExistsMsg))) {
 			await db
 				.update(repositoriesTable)
 				.set({ status: "healthy", lastChecked: Date.now(), lastError: null })
