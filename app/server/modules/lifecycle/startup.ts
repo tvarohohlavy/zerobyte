@@ -1,7 +1,7 @@
 import { Scheduler } from "../../core/scheduler";
 import { and, eq, or } from "drizzle-orm";
 import { db } from "../../db/db";
-import { volumesTable } from "../../db/schema";
+import { volumesTable, usersTable, repositoriesTable } from "../../db/schema";
 import { logger } from "../../utils/logger";
 import { restic } from "../../utils/restic";
 import { volumeService } from "../volumes/volume.service";
@@ -87,21 +87,42 @@ export const startup = async () => {
 		// Wait for all referenced volumes to be ready before creating backup schedules
 		const backupServiceModule = await import("../backups/backups.service");
 		for (const s of configFileBackupSchedules) {
+			// Resolve volume name to ID
+			const volumeName = s.volume || s.volumeName;
 			const volume = await db.query.volumesTable.findFirst({
-				where: eq(volumesTable.name, s.volumeName),
+				where: eq(volumesTable.name, volumeName),
 			});
-			if (volume && volume.status !== "mounted") {
+			if (!volume) {
+				logger.warn(`Backup schedule not created: Volume '${volumeName}' not found`);
+				continue;
+			}
+			// Resolve repository name to ID
+			const repositoryName = s.repository || s.repositoryName;
+			const repository = await db.query.repositoriesTable.findFirst({
+				where: eq(repositoriesTable.name, repositoryName),
+			});
+			if (!repository) {
+				logger.warn(`Backup schedule not created: Repository '${repositoryName}' not found`);
+				continue;
+			}
+			// Mount volume if not already mounted
+			if (volume.status !== "mounted") {
 				try {
 					await volumeService.mountVolume(volume.name);
-					logger.info(`Mounted volume ${volume.name} for backup schedule ${s.cronExpression || s.name}`);
+					logger.info(`Mounted volume ${volume.name} for backup schedule`);
 				} catch (e) {
 					const err = e instanceof Error ? e : new Error(String(e));
-					logger.warn(`Could not mount volume ${volume.name} for backup schedule ${s.cronExpression || s.name}: ${err.message}`);
+					logger.warn(`Could not mount volume ${volume.name}: ${err.message}`);
 					continue;
 				}
 			}
+			// Create schedule with resolved IDs
 			try {
-				await backupServiceModule.backupsService.createSchedule(s);
+				await backupServiceModule.backupsService.createSchedule({
+					...s,
+					volumeId: volume.id,
+					repositoryId: repository.id,
+				});
 				logger.info(`Initialized backup schedule from config: ${s.cronExpression || s.name}`);
 			} catch (e) {
 				const err = e instanceof Error ? e : new Error(String(e));
