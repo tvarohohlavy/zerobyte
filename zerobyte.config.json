@@ -213,14 +213,6 @@
       "config": {
         "shoutrrrUrl": "${SHOUTRRR_URL}"
       }
-    },
-    {
-      "name": "telegram-backups",
-      "type": "telegram",
-      "config": {
-        "botToken": "${TELEGRAM_BOT_TOKEN}",
-        "chatId": "${TELEGRAM_CHAT_ID}"
-      }
     }
   ],
   "admin": {

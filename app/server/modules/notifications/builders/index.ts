@@ -6,7 +6,6 @@ import { buildGotifyShoutrrrUrl } from "./gotify";
 import { buildNtfyShoutrrrUrl } from "./ntfy";
 import { buildPushoverShoutrrrUrl } from "./pushover";
 import { buildCustomShoutrrrUrl } from "./custom";
-import { buildTelegramShoutrrrUrl } from "./telegram";
 
 export function buildShoutrrrUrl(config: NotificationConfig): string {
 	switch (config.type) {
@@ -24,8 +23,6 @@ export function buildShoutrrrUrl(config: NotificationConfig): string {
 			return buildPushoverShoutrrrUrl(config);
 		case "custom":
 			return buildCustomShoutrrrUrl(config);
-		case "telegram":
-			return buildTelegramShoutrrrUrl(config);
 		default: {
 			// TypeScript exhaustiveness check
 			const _exhaustive: never = config;

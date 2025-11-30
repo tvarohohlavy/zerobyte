@@ -74,11 +74,6 @@ const defaultValuesForType = {
 		type: "custom" as const,
 		shoutrrrUrl: "",
 	},
-	telegram: {
-		type: "telegram" as const,
-		botToken: "",
-		chatId: ""
-	},
 };
 
 export const CreateNotificationForm = ({ onSubmit, mode = "create", initialValues, formId, className }: Props) => {
@@ -154,7 +149,6 @@ export const CreateNotificationForm = ({ onSubmit, mode = "create", initialValue
 									<SelectItem value="ntfy">Ntfy</SelectItem>
 									<SelectItem value="pushover">Pushover</SelectItem>
 									<SelectItem value="custom">Custom (Shoutrrr URL)</SelectItem>
-									<SelectItem value="telegram">Telegram</SelectItem>
 								</SelectContent>
 							</Select>
 							<FormDescription>Choose the notification delivery method.</FormDescription>
@@ -650,43 +644,6 @@ export const CreateNotificationForm = ({ onSubmit, mode = "create", initialValue
 							</FormItem>
 						)}
 					/>
-				)}
-
-				{watchedType === "telegram" && (
-					<>
-						<FormField
-							control={form.control}
-							name="botToken"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Bot Token</FormLabel>
-									<FormControl>
-										<Input {...field} type="password" placeholder="123456789:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" />
-									</FormControl>
-									<FormDescription>
-										Telegram bot token. Get this from BotFather when you create your bot.
-									</FormDescription>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						<FormField
-							control={form.control}
-							name="chatId"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Chat ID</FormLabel>
-									<FormControl>
-										<Input {...field} placeholder="-1001234567890" />
-									</FormControl>
-									<FormDescription>
-										Telegram chat ID to send notifications to. Use @userinfobot to get your chat ID.
-									</FormDescription>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-					</>
 				)}
 			</form>
 		</Form>
