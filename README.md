@@ -37,6 +37,350 @@ Zerobyte is a backup automation tool that helps you save your data across multip
 
 In order to run Zerobyte, you need to have Docker and Docker Compose installed on your server. Then, you can use the provided `docker-compose.yml` file to start the application.
 
+### Configure Zerobyte via Config File
+
+
+You can pre-configure backup sources (volumes), destinations (repositories), backup schedules, notification destinations and admin user using a config file (`zerobyte.config.json` by default (mounted in /app dir), or set `ZEROBYTE_CONFIG_PATH`).
+
+Secrets/credentials in the config file can reference environment variables using `${VAR_NAME}` syntax for secure injection.
+
+> **ℹ️ Config File Behavior**
+>
+> The config file is applied on startup using a **create-only** approach:
+> - Resources defined in the config are only created if they don't already exist in the database
+> - Existing resources with the same name are **not overwritten** - a warning is logged and the config entry is skipped
+> - Changes made via the UI are preserved across container restarts
+> - To update a resource from config, either modify it via the UI or delete it first
+>
+> This means the config file serves as "initial setup" rather than "desired state sync".
+
+#### zerobyte.config.json Structure
+
+```json
+{
+  "volumes": [
+    // Array of volume objects. Each must have a unique "name" and a "config" matching one of the types below.
+  ],
+  "repositories": [
+    // Array of repository objects. Each must have a unique "name" and a "config" matching one of the types below.
+    // Optionally, "compressionMode" ("auto", "off", "max")
+  ],
+  "backupSchedules": [
+    // Array of backup schedule objects as described below.
+  ],
+  "notificationDestinations": [
+    // Array of notification destination objects as described below.
+  ]
+}
+```
+
+##### Volume Types
+
+- **Local Directory**
+  ```json
+  {
+    "name": "local-volume",
+    "config": {
+      "backend": "directory",
+      "path": "/data",
+      "readOnly": true
+    }
+  }
+  ```
+
+- **NFS**
+  ```json
+  {
+    "name": "nfs-volume",
+    "config": {
+      "backend": "nfs",
+      "server": "nfs.example.com",
+      "exportPath": "/data",
+      "port": 2049,
+      "version": "4",
+      "readOnly": false
+    }
+  }
+  ```
+
+- **SMB**
+  ```json
+  {
+    "name": "smb-volume",
+    "config": {
+      "backend": "smb",
+      "server": "smb.example.com",
+      "share": "shared",
+      "username": "user",
+      "password": "${SMB_PASSWORD}",
+      "vers": "3.0",
+      "domain": "WORKGROUP",
+      "port": 445,
+      "readOnly": false
+    }
+  }
+  ```
+
+- **WebDAV**
+  ```json
+  {
+    "name": "webdav-volume",
+    "config": {
+      "backend": "webdav",
+      "server": "webdav.example.com",
+      "path": "/remote.php/webdav",
+      "username": "user",
+      "password": "${WEBDAV_PASSWORD}",
+      "port": 80,
+      "readOnly": false,
+      "ssl": true
+    }
+  }
+  ```
+
+##### Repository Types
+
+- **Local Directory**
+  ```json
+  {
+    "name": "local-repo",
+    "config": {
+      "backend": "local",
+      "path": "/var/lib/zerobyte/repositories"
+    },
+    "compressionMode": "auto"
+  }
+  ```
+  > **Note for importing existing local repositories:** If you're importing an existing repository (e.g., from a backup or migration), include the `name` field in `config` with the original subfolder name. The actual restic repo is stored at `{path}/{name}`. You can find this value in an exported config under `repositories[].config.name`.
+
+- **S3-Compatible**
+  ```json
+  {
+    "name": "backup-repo",
+    "config": {
+      "backend": "s3",
+      "bucket": "mybucket",
+      "accessKeyId": "${ACCESS_KEY_ID}",
+      "secretAccessKey": "${SECRET_ACCESS_KEY}"
+    },
+    "compressionMode": "auto"
+  }
+  ```
+
+- **Google Cloud Storage**
+  ```json
+  {
+    "name": "gcs-repo",
+    "config": {
+      "backend": "gcs",
+      "bucket": "mybucket",
+      "projectId": "my-gcp-project",
+      "credentialsJson": "${GCS_CREDENTIALS}"
+    }
+  }
+  ```
+
+- **Azure Blob Storage**
+  ```json
+  {
+    "name": "azure-repo",
+    "config": {
+      "backend": "azure",
+      "container": "mycontainer",
+      "accountName": "myaccount",
+      "accountKey": "${AZURE_KEY}"
+    }
+  }
+  ```
+
+- **WebDAV, rclone, SFTP, REST, etc.**
+  (See documentation for required fields; all support env variable secrets.)
+
+##### Backup Schedules
+
+- **Example:**
+  ```json
+  {
+    "volume": "local-volume",
+    "repository": "local-repo",
+    "cronExpression": "0 2 * * *",
+    "retentionPolicy": { "keepLast": 7, "keepDaily": 7 },
+    "includePatterns": ["important-folder"],
+    "excludePatterns": ["*.tmp", "*.log"],
+    "enabled": true,
+    "notifications": ["slack-alerts", "email-admin"]
+  }
+  ```
+- **Fields:**
+  - `volume`: Name of the source volume
+  - `repository`: Name of the destination repository
+  - `cronExpression`: Cron string for schedule
+  - `retentionPolicy`: Object with retention rules (e.g., keepLast, keepDaily)
+  - `includePatterns`/`excludePatterns`: Arrays of patterns
+  - `enabled`: Boolean
+  - `notifications`: Array of notification destination names (strings) or detailed objects:
+    - Simple: `["slack-alerts", "email-admin"]`
+    - Detailed: `[{"name": "slack-alerts", "notifyOnStart": false, "notifyOnSuccess": true, "notifyOnFailure": true}]`
+
+##### Notification Destinations
+
+- **Examples:**
+  - **Slack**
+    ```json
+    {
+      "name": "slack-alerts",
+      "type": "slack",
+      "config": {
+        "webhookUrl": "${SLACK_WEBHOOK_URL}",
+        "channel": "#backups",
+        "username": "zerobyte",
+        "iconEmoji": ":floppy_disk:"
+      }
+    }
+    ```
+  - **Email**
+    ```json
+    {
+      "name": "email-admin",
+      "type": "email",
+      "config": {
+        "smtpHost": "smtp.example.com",
+        "smtpPort": 587,
+        "username": "admin@example.com",
+        "password": "${EMAIL_PASSWORD}",
+        "from": "zerobyte@example.com",
+        "to": ["admin@example.com"],
+        "useTLS": true
+      }
+    }
+    ```
+  - **Discord**
+    ```json
+    {
+      "name": "discord-backups",
+      "type": "discord",
+      "config": {
+        "webhookUrl": "${DISCORD_WEBHOOK_URL}",
+        "username": "zerobyte",
+        "avatarUrl": "https://example.com/avatar.png",
+        "threadId": "1234567890"
+      }
+    }
+    ```
+  - **Gotify**
+    ```json
+    {
+      "name": "gotify-notify",
+      "type": "gotify",
+      "config": {
+        "serverUrl": "https://gotify.example.com",
+        "token": "${GOTIFY_TOKEN}",
+        "path": "/message",
+        "priority": 5
+      }
+    }
+    ```
+  - **ntfy**
+    ```json
+    {
+      "name": "ntfy-notify",
+      "type": "ntfy",
+      "config": {
+        "serverUrl": "https://ntfy.example.com",
+        "topic": "zerobyte-backups",
+        "priority": "high",
+        "username": "ntfyuser",
+        "password": "${NTFY_PASSWORD}"
+      }
+    }
+    ```
+  - **Pushover**
+    ```json
+    {
+      "name": "pushover-notify",
+      "type": "pushover",
+      "config": {
+        "userKey": "${PUSHOVER_USER_KEY}",
+        "apiToken": "${PUSHOVER_API_TOKEN}",
+        "devices": "phone,tablet",
+        "priority": 1
+      }
+    }
+    ```
+  - **Telegram**
+    ```json
+    {
+      "name": "telegram-notify",
+      "type": "telegram",
+      "config": {
+        "botToken": "${TELEGRAM_BOT_TOKEN}",
+        "chatId": "123456789"
+      }
+    }
+    ```
+  - **Custom (shoutrrr)**
+    ```json
+    {
+      "name": "custom-shoutrrr",
+      "type": "custom",
+      "config": {
+        "shoutrrrUrl": "${SHOUTRRR_URL}"
+      }
+    }
+    ```
+
+- **Fields:**
+  - `name`: Unique name for the notification config
+  - `type`: Notification type (email, slack, discord, gotify, ntfy, pushover, telegram, custom)
+  - `config`: Type-specific config, secrets via `${ENV_VAR}`
+
+##### Admin Setup (Automated)
+
+- **Example:**
+  ```json
+  {
+    "admin": {
+      "username": "admin",
+      "password": "${ADMIN_PASSWORD}",
+      "recoveryKey": "${RECOVERY_KEY}"
+    }
+  }
+  ```
+- **Fields:**
+  - `username`: Admin username to create on first startup
+  - `password`: Admin password (can use `${ENV_VAR}`)
+  - `recoveryKey`: Optional recovery key (can use `${ENV_VAR}`) - if provided, the UI prompt to download recovery key will be skipped
+
+**On first startup, Zerobyte will automatically create the admin user from the config file.**
+
+> **⚠️ About the Recovery Key**
+>
+> The recovery key is a 64-character hex string that serves two critical purposes:
+> 1. **Restic repository password** - Used to encrypt all your backup data
+> 2. **Database encryption key** - Used to encrypt credentials stored in Zerobyte's database
+>
+> **If you lose this key, you will lose access to all your backups and stored credentials.**
+>
+> **Generating a recovery key ahead of time:**
+> ```bash
+> # Using OpenSSL (Linux/macOS)
+> openssl rand -hex 32
+>
+> # Using Python
+> python3 -c "import secrets; print(secrets.token_hex(32))"
+> ```
+>
+> **Retrieving from an existing instance:**
+> - Download via UI: Settings → Download Recovery Key
+> - Or read directly from the container: `docker exec zerobyte cat /var/lib/zerobyte/data/restic.pass`
+
+---
+
+**Notes:**
+- All secrets (passwords, keys) can use `${ENV_VAR}` syntax to inject from environment variables.
+- All paths must be accessible inside the container (mount host paths as needed).
+- `readOnly` is supported for all volume types that allow it, including local directories.
+
 ```yaml
 services:
   zerobyte:
@@ -54,6 +398,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /var/lib/zerobyte:/var/lib/zerobyte
+      - ./zerobyte.config.json:/app/zerobyte.config.json:ro # Mount your config file
 ```
 
 > [!WARNING]

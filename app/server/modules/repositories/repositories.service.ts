@@ -18,32 +18,42 @@ const listRepositories = async () => {
 const encryptConfig = async (config: RepositoryConfig): Promise<RepositoryConfig> => {
 	const encryptedConfig: Record<string, string | boolean | number> = { ...config };
 
-	if (config.customPassword) {
+	if (config.customPassword && !cryptoUtils.isEncrypted(config.customPassword)) {
 		encryptedConfig.customPassword = await cryptoUtils.encrypt(config.customPassword);
 	}
 
 	switch (config.backend) {
 		case "s3":
 		case "r2":
-			encryptedConfig.accessKeyId = await cryptoUtils.encrypt(config.accessKeyId);
-			encryptedConfig.secretAccessKey = await cryptoUtils.encrypt(config.secretAccessKey);
+			if (!cryptoUtils.isEncrypted(config.accessKeyId)) {
+				encryptedConfig.accessKeyId = await cryptoUtils.encrypt(config.accessKeyId);
+			}
+			if (!cryptoUtils.isEncrypted(config.secretAccessKey)) {
+				encryptedConfig.secretAccessKey = await cryptoUtils.encrypt(config.secretAccessKey);
+			}
 			break;
 		case "gcs":
-			encryptedConfig.credentialsJson = await cryptoUtils.encrypt(config.credentialsJson);
+			if (!cryptoUtils.isEncrypted(config.credentialsJson)) {
+				encryptedConfig.credentialsJson = await cryptoUtils.encrypt(config.credentialsJson);
+			}
 			break;
 		case "azure":
-			encryptedConfig.accountKey = await cryptoUtils.encrypt(config.accountKey);
+			if (!cryptoUtils.isEncrypted(config.accountKey)) {
+				encryptedConfig.accountKey = await cryptoUtils.encrypt(config.accountKey);
+			}
 			break;
 		case "rest":
-			if (config.username) {
+			if (config.username && !cryptoUtils.isEncrypted(config.username)) {
 				encryptedConfig.username = await cryptoUtils.encrypt(config.username);
 			}
-			if (config.password) {
+			if (config.password && !cryptoUtils.isEncrypted(config.password)) {
 				encryptedConfig.password = await cryptoUtils.encrypt(config.password);
 			}
 			break;
 		case "sftp":
-			encryptedConfig.privateKey = await cryptoUtils.encrypt(config.privateKey);
+			if (!cryptoUtils.isEncrypted(config.privateKey)) {
+				encryptedConfig.privateKey = await cryptoUtils.encrypt(config.privateKey);
+			}
 			break;
 	}
 
@@ -62,7 +72,8 @@ const createRepository = async (name: string, config: RepositoryConfig, compress
 	}
 
 	const id = crypto.randomUUID();
-	const shortId = generateShortId();
+
+	const shortId = (config.backend === "local" && config.name) ? config.name : generateShortId();
 
 	let processedConfig = config;
 	if (config.backend === "local") {
@@ -94,12 +105,23 @@ const createRepository = async (name: string, config: RepositoryConfig, compress
 		const result = await restic
 			.snapshots(encryptedConfig)
 			.then(() => ({ error: null }))
-			.catch((error) => ({ error }));
+			.catch((err) => ({ error: err }));
 
 		error = result.error;
 	} else {
 		const initResult = await restic.init(encryptedConfig);
 		error = initResult.error;
+
+		if (error) {
+			const errorStr = typeof error === "string" ? error : (error as Error)?.message || "";
+			if (errorStr.includes("config file already exists")) {
+				const verifyResult = await restic
+					.snapshots(encryptedConfig)
+					.then(() => ({ error: null }))
+					.catch((err) => ({ error: err }));
+				error = verifyResult.error;
+			}
+		}
 	}
 
 	if (!error) {

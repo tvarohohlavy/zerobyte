@@ -17,7 +17,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /var/lib/zerobyte:/var/lib/zerobyte
-
+      
       - ./app:/app/app
       - ~/.config/rclone:/root/.config/rclone
       # - /run/docker/plugins:/run/docker/plugins
@@ -36,8 +36,17 @@ services:
       - SYS_ADMIN
     ports:
       - "4096:4096"
+    environment:
+      - ACCESS_KEY_ID=your-access-key-id
+      - SECRET_ACCESS_KEY=your-secret-access-key
+      - SMB_PASSWORD=your-smb-password
+      - WEBDAV_PASSWORD=your-webdav-password
+      - GCS_CREDENTIALS=your-gcs-credentials-json
+      - AZURE_KEY=your-azure-key
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /var/lib/zerobyte:/var/lib/zerobyte:rshared
+      - ./zerobyte.config.json:/app/zerobyte.config.json:ro
+      - ./mydata:/mydata:ro
       - /run/docker/plugins:/run/docker/plugins
       - /var/run/docker.sock:/var/run/docker.sock

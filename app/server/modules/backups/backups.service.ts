@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import cron from "node-cron";
 import { CronExpressionParser } from "cron-parser";
 import { NotFoundError, BadRequestError, ConflictError } from "http-errors-enhanced";
@@ -75,6 +75,17 @@ const createSchedule = async (data: CreateBackupScheduleBody) => {
 
 	if (!repository) {
 		throw new NotFoundError("Repository not found");
+	}
+
+	const existingSchedule = await db.query.backupSchedulesTable.findFirst({
+		where: and(
+			eq(backupSchedulesTable.volumeId, volume.id),
+			eq(backupSchedulesTable.repositoryId, repository.id)
+		),
+	});
+
+	if (existingSchedule) {
+		throw new ConflictError(`A backup schedule for volume '${volume.name}' and repository '${repository.name}' already exists`);
 	}
 
 	const nextBackupAt = calculateNextRun(data.cronExpression);

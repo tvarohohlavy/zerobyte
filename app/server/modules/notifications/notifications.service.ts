@@ -38,42 +38,42 @@ async function encryptSensitiveFields(config: NotificationConfig): Promise<Notif
 		case "email":
 			return {
 				...config,
-				password: await cryptoUtils.encrypt(config.password),
+				password: cryptoUtils.isEncrypted(config.password) ? config.password : await cryptoUtils.encrypt(config.password),
 			};
 		case "slack":
 			return {
 				...config,
-				webhookUrl: await cryptoUtils.encrypt(config.webhookUrl),
+				webhookUrl: cryptoUtils.isEncrypted(config.webhookUrl) ? config.webhookUrl : await cryptoUtils.encrypt(config.webhookUrl),
 			};
 		case "discord":
 			return {
 				...config,
-				webhookUrl: await cryptoUtils.encrypt(config.webhookUrl),
+				webhookUrl: cryptoUtils.isEncrypted(config.webhookUrl) ? config.webhookUrl : await cryptoUtils.encrypt(config.webhookUrl),
 			};
 		case "gotify":
 			return {
 				...config,
-				token: await cryptoUtils.encrypt(config.token),
+				token: cryptoUtils.isEncrypted(config.token) ? config.token : await cryptoUtils.encrypt(config.token),
 			};
 		case "ntfy":
 			return {
 				...config,
-				password: config.password ? await cryptoUtils.encrypt(config.password) : undefined,
+				password: config.password ? (cryptoUtils.isEncrypted(config.password) ? config.password : await cryptoUtils.encrypt(config.password)) : undefined,
 			};
 		case "pushover":
 			return {
 				...config,
-				apiToken: await cryptoUtils.encrypt(config.apiToken),
+				apiToken: cryptoUtils.isEncrypted(config.apiToken) ? config.apiToken : await cryptoUtils.encrypt(config.apiToken),
 			};
 		case "telegram":
 			return {
 				...config,
-				botToken: await cryptoUtils.encrypt(config.botToken),
+				botToken: cryptoUtils.isEncrypted(config.botToken) ? config.botToken : await cryptoUtils.encrypt(config.botToken),
 			};
 		case "custom":
 			return {
 				...config,
-				shoutrrrUrl: await cryptoUtils.encrypt(config.shoutrrrUrl),
+				shoutrrrUrl: cryptoUtils.isEncrypted(config.shoutrrrUrl) ? config.shoutrrrUrl : await cryptoUtils.encrypt(config.shoutrrrUrl),
 			};
 		default:
 			return config;
