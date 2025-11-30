@@ -12,16 +12,6 @@ import { toMessage } from "../../utils/errors";
 import { serverEvents } from "../../core/events";
 import { notificationsService } from "../notifications/notifications.service";
 
-// Helper to read backup config from environment variables
-function getEnvBackupConfig() {
-	return {
-		retentionPolicy: process.env.BACKUP_RETENTION || undefined,
-		cronExpression: process.env.BACKUP_CRON || undefined,
-		excludePatterns: process.env.BACKUP_EXCLUDE ? process.env.BACKUP_EXCLUDE.split(",") : undefined,
-		includePatterns: process.env.BACKUP_INCLUDE ? process.env.BACKUP_INCLUDE.split(",") : undefined,
-	};
-}
-
 const runningBackups = new Map<number, AbortController>();
 
 const calculateNextRun = (cronExpression: string): number => {
@@ -67,16 +57,14 @@ const getSchedule = async (scheduleId: number) => {
 };
 
 const createSchedule = async (data: CreateBackupScheduleBody) => {
-	// Use env config as fallback/defaults
-	const envConfig = getEnvBackupConfig();
-	const cronExpression = data.cronExpression || envConfig.cronExpression;
-	if (!cron.validate(cronExpression)) {
+	if (!cron.validate(data.cronExpression)) {
 		throw new BadRequestError("Invalid cron expression");
 	}
 
 	const volume = await db.query.volumesTable.findFirst({
 		where: eq(volumesTable.id, data.volumeId),
 	});
+
 	if (!volume) {
 		throw new NotFoundError("Volume not found");
 	}
@@ -84,24 +72,26 @@ const createSchedule = async (data: CreateBackupScheduleBody) => {
 	const repository = await db.query.repositoriesTable.findFirst({
 		where: eq(repositoriesTable.id, data.repositoryId),
 	});
+
 	if (!repository) {
 		throw new NotFoundError("Repository not found");
 	}
 
-	const nextBackupAt = calculateNextRun(cronExpression);
+	const nextBackupAt = calculateNextRun(data.cronExpression);
 	const [newSchedule] = await db
 		.insert(backupSchedulesTable)
 		.values({
 			volumeId: data.volumeId,
 			repositoryId: data.repositoryId,
 			enabled: data.enabled,
-			cronExpression,
-			retentionPolicy: data.retentionPolicy ?? envConfig.retentionPolicy ?? null,
-			excludePatterns: data.excludePatterns ?? envConfig.excludePatterns ?? [],
-			includePatterns: data.includePatterns ?? envConfig.includePatterns ?? [],
-			nextBackupAt,
+			cronExpression: data.cronExpression,
+			retentionPolicy: data.retentionPolicy ?? null,
+			excludePatterns: data.excludePatterns ?? [],
+			includePatterns: data.includePatterns ?? [],
+			nextBackupAt: nextBackupAt,
 		})
 		.returning();
+
 	if (!newSchedule) {
 		throw new Error("Failed to create backup schedule");
 	}

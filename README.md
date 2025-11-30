@@ -37,28 +37,6 @@ Zerobyte is a backup automation tool that helps you save your data across multip
 
 In order to run Zerobyte, you need to have Docker and Docker Compose installed on your server. Then, you can use the provided `docker-compose.yml` file to start the application.
 
-### Configuration via Environment Variables
-
-You can configure backup automation during deployment using the following environment variables:
-
-- `BACKUP_RETENTION`: Default retention policy for backups (e.g., `7d`)
-- `BACKUP_CRON`: Default cron expression for backup schedule (e.g., `0 2 * * *`)
-- `BACKUP_EXCLUDE`: Comma-separated list of patterns to exclude from backup
-- `BACKUP_INCLUDE`: Comma-separated list of patterns to include in backup
-
-Set these variables in your deployment environment or in your Docker Compose file under the `environment:` section.
-
-Example:
-```yaml
-services:
-  zerobyte:
-    environment:
-      - BACKUP_RETENTION=7d
-      - BACKUP_CRON=0 2 * * *
-      - BACKUP_EXCLUDE=*.tmp,*.log
-      - BACKUP_INCLUDE=important-folder
-```
-
 ### Configure Volumes and Repositories via Config File
 
 
