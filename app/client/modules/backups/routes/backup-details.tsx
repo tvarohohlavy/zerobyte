@@ -21,6 +21,7 @@ import {
 	updateBackupScheduleMutation,
 	stopBackupMutation,
 	deleteSnapshotMutation,
+	getScheduleNotificationsOptions,
 } from "~/client/api-client/@tanstack/react-query.gen";
 import { parseError } from "~/client/lib/errors";
 import { getCronExpression } from "~/utils/utils";
@@ -72,6 +73,10 @@ export default function ScheduleDetailsPage({ params, loaderData }: Route.Compon
 		initialData: loaderData.schedule,
 		refetchInterval: 10000,
 		refetchOnWindowFocus: true,
+	});
+
+	const { data: scheduleNotifications } = useQuery({
+		...getScheduleNotificationsOptions({ path: { scheduleId: params.id } }),
 	});
 
 	const {
@@ -225,6 +230,7 @@ export default function ScheduleDetailsPage({ params, loaderData }: Route.Compon
 				setIsEditMode={setIsEditMode}
 				schedule={schedule}
 				notificationDestinations={loaderData.notifs}
+				scheduleNotifications={scheduleNotifications}
 			/>
 			<div className={cn({ hidden: !loaderData.notifs?.length })}>
 				<ScheduleNotificationsConfig scheduleId={schedule.id} destinations={loaderData.notifs ?? []} />

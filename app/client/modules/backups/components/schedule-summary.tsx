@@ -26,11 +26,12 @@ type Props = {
 	handleStopBackup: () => void;
 	handleDeleteSchedule: () => void;
 	setIsEditMode: (isEdit: boolean) => void;
-    notificationDestinations?: Array<{ name: string; config: any; type?: string }>;
+	notificationDestinations?: Array<{ id: number; name: string; config: any; type?: string }>;
+	scheduleNotifications?: Array<{ destinationId: number; notifyOnStart: boolean; notifyOnSuccess: boolean; notifyOnFailure: boolean }>;
 };
 
 export const ScheduleSummary = (props: Props) => {
-	const { schedule, handleToggleEnabled, handleRunBackupNow, handleStopBackup, handleDeleteSchedule, setIsEditMode, notificationDestinations } = props;
+	const { schedule, handleToggleEnabled, handleRunBackupNow, handleStopBackup, handleDeleteSchedule, setIsEditMode, notificationDestinations, scheduleNotifications } = props;
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 	const [showForgetConfirm, setShowForgetConfirm] = useState(false);
 
@@ -68,14 +69,28 @@ export const ScheduleSummary = (props: Props) => {
 
 	const handleExportConfig = () => {
 		if (!schedule) return;
-		let assignedNotifs: Array<any> = [];
-		if (notificationDestinations && schedule.notifications) {
-			assignedNotifs = schedule.notifications.map((name: string) =>
-				notificationDestinations.find((n) => n.name === name) ?? { name, config: null }
-			);
+		// Build notifications array from schedule notifications - only include name and assignment flags
+		// Full destination config should be exported separately via notificationDestinations
+		const notifications: Array<{
+			name: string;
+			notifyOnStart: boolean;
+			notifyOnSuccess: boolean;
+			notifyOnFailure: boolean;
+		}> = [];
+		if (scheduleNotifications && notificationDestinations) {
+			for (const assignment of scheduleNotifications) {
+				const dest = notificationDestinations.find((d) => d.id === assignment.destinationId);
+				if (dest) {
+					notifications.push({
+						name: dest.name,
+						notifyOnStart: assignment.notifyOnStart,
+						notifyOnSuccess: assignment.notifyOnSuccess,
+						notifyOnFailure: assignment.notifyOnFailure,
+					});
+				}
+			}
 		}
 		const configData = {
-			id: schedule.id,
 			volume: schedule.volume?.name,
 			repository: schedule.repository?.name,
 			cronExpression: schedule.cronExpression,
@@ -83,7 +98,7 @@ export const ScheduleSummary = (props: Props) => {
 			includePatterns: schedule.includePatterns,
 			excludePatterns: schedule.excludePatterns,
 			enabled: schedule.enabled,
-			notifications: assignedNotifs,
+			notifications,
 		};
 		const blob = new Blob([JSON.stringify(configData, null, 2)], { type: "application/json" });
 		const url = URL.createObjectURL(blob);

@@ -1,7 +1,7 @@
 import { Scheduler } from "../../core/scheduler";
 import { and, eq, or } from "drizzle-orm";
 import { db } from "../../db/db";
-import { volumesTable, usersTable, repositoriesTable } from "../../db/schema";
+import { volumesTable, usersTable, repositoriesTable, notificationDestinationsTable } from "../../db/schema";
 import { logger } from "../../utils/logger";
 import { restic } from "../../utils/restic";
 import { volumeService } from "../volumes/volume.service";
@@ -48,6 +48,19 @@ export const startup = async () => {
 
 	await Scheduler.start();
 	await Scheduler.clear();
+
+	// Write recovery key from config BEFORE ensuring passfile, so repositories use the correct password
+	try {
+		const fs = await import("node:fs/promises");
+		const { RESTIC_PASS_FILE } = await import("../../core/constants.js");
+		if (configFileAdmin && configFileAdmin.recoveryKey) {
+			await fs.writeFile(RESTIC_PASS_FILE, configFileAdmin.recoveryKey, { mode: 0o600 });
+			logger.info(`Recovery key written from config to ${RESTIC_PASS_FILE}`);
+		}
+	} catch (err) {
+		const e = err instanceof Error ? err : new Error(String(err));
+		logger.error(`Failed to write recovery key from config: ${e.message}`);
+	}
 
 	await restic.ensurePassfile().catch((err) => {
 		logger.error(`Error ensuring restic passfile exists: ${err.message}`);
@@ -117,8 +130,9 @@ export const startup = async () => {
 				}
 			}
 			// Create schedule with resolved IDs
+			let createdSchedule;
 			try {
-				await backupServiceModule.backupsService.createSchedule({
+				createdSchedule = await backupServiceModule.backupsService.createSchedule({
 					...s,
 					volumeId: volume.id,
 					repositoryId: repository.id,
@@ -127,42 +141,66 @@ export const startup = async () => {
 			} catch (e) {
 				const err = e instanceof Error ? e : new Error(String(e));
 				logger.warn(`Backup schedule not created: ${err.message}`);
+				continue;
+			}
+
+			// Handle notification assignments for this schedule
+			if (createdSchedule && s.notifications && Array.isArray(s.notifications) && s.notifications.length > 0) {
+				try {
+					const assignments: Array<{
+						destinationId: number;
+						notifyOnStart: boolean;
+						notifyOnSuccess: boolean;
+						notifyOnFailure: boolean;
+					}> = [];
+					for (const notif of s.notifications) {
+						// Support both string (name only) and object (full config) formats
+						const destName = typeof notif === 'string' ? notif : notif.name;
+						const dest = await db.query.notificationDestinationsTable.findFirst({
+							where: eq(notificationDestinationsTable.name, destName),
+						});
+						if (dest) {
+							assignments.push({
+								destinationId: dest.id,
+								notifyOnStart: typeof notif === 'object' ? (notif.notifyOnStart ?? true) : true,
+								notifyOnSuccess: typeof notif === 'object' ? (notif.notifyOnSuccess ?? true) : true,
+								notifyOnFailure: typeof notif === 'object' ? (notif.notifyOnFailure ?? true) : true,
+							});
+						} else {
+							logger.warn(`Notification destination '${destName}' not found for schedule`);
+						}
+					}
+					if (assignments.length > 0) {
+						await notificationsServiceModule.notificationsService.updateScheduleNotifications(createdSchedule.id, assignments);
+						logger.info(`Assigned ${assignments.length} notification(s) to backup schedule`);
+					}
+				} catch (e) {
+					const err = e instanceof Error ? e : new Error(String(e));
+					logger.warn(`Failed to assign notifications to schedule: ${err.message}`);
+				}
 			}
 
 		}
 		
 		try {
 			const { authService } = await import("../auth/auth.service");
-			const fs = await import("node:fs/promises");
-			// Static import for RESTIC_PASS_FILE
-			const { RESTIC_PASS_FILE } = await import("../../core/constants.js");
 			if (configFileAdmin && configFileAdmin.username && configFileAdmin.password) {
 				const hasUsers = await authService.hasUsers();
 				if (!hasUsers) {
 					// Register admin user
 					const { user } = await authService.register(configFileAdmin.username, configFileAdmin.password);
 					logger.info(`Admin user '${configFileAdmin.username}' created from config.`);
-					// Write recovery key
-					try {
-						let recoveryKey: string;
-						if (configFileAdmin.recoveryKey) {
-							recoveryKey = configFileAdmin.recoveryKey;
-							// Mark as downloaded so UI does not prompt
-							await db.update(usersTable).set({ hasDownloadedResticPassword: true }).where(eq(usersTable.id, user.id));
-						} else {
-							recoveryKey = await fs.readFile(RESTIC_PASS_FILE, "utf-8");
-						}
-						await fs.writeFile(RESTIC_PASS_FILE, recoveryKey, { mode: 0o600 });
-						logger.info(`Recovery key written to ${RESTIC_PASS_FILE}`);
-					} catch (err) {
-						logger.error(`Failed to write recovery key: ${err.message}`);
+					// If recovery key was provided, mark as downloaded so UI does not prompt
+					if (configFileAdmin.recoveryKey) {
+						await db.update(usersTable).set({ hasDownloadedResticPassword: true }).where(eq(usersTable.id, user.id));
 					}
 				}
 			} else {
 				logger.warn("Admin config missing required fields (username, password). Skipping automated admin setup.");
 			}
 		} catch (err) {
-			logger.error(`Automated admin setup failed: ${err.message}`);
+			const e = err instanceof Error ? err : new Error(String(err));
+			logger.error(`Automated admin setup failed: ${e.message}`);
 		}
 	} catch (e) {
 		const err = e instanceof Error ? e : new Error(String(e));

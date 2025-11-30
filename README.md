@@ -260,7 +260,9 @@ Secrets/credentials in the config file can reference environment variables using
   - `retentionPolicy`: Object with retention rules (e.g., keepLast, keepDaily)
   - `includePatterns`/`excludePatterns`: Arrays of patterns
   - `enabled`: Boolean
-  - `notifications`: Array of notification destination names
+  - `notifications`: Array of notification destination names (strings) or detailed objects:
+    - Simple: `["slack-alerts", "email-admin"]`
+    - Detailed: `[{"name": "slack-alerts", "notifyOnStart": false, "notifyOnSuccess": true, "notifyOnFailure": true}]`
 
 ##### Notification Destinations
 
