@@ -288,7 +288,7 @@ export const configExportController = new Hono()
 			});
 		} catch (err) {
 			logger.error(`Config export failed: ${err instanceof Error ? err.message : String(err)}`);
-			return c.json({ error: "Failed to export config" }, 500);
+			return c.json({ error: err instanceof Error ? err.message : "Failed to export config" }, 500);
 		}
 	})
 	.get("/export/volumes", async (c) => {
