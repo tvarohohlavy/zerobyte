@@ -274,6 +274,7 @@ export const configExportController = new Hono()
 			if (includeRecoveryKey) {
 				try {
 					recoveryKey = await Bun.file(RESTIC_PASS_FILE).text();
+					logger.warn("Recovery key exported - this is a security-sensitive operation");
 				} catch {
 					logger.warn("Could not read recovery key file");
 				}
