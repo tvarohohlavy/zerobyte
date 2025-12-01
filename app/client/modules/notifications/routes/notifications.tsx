@@ -124,7 +124,7 @@ export default function Notifications({ loaderData }: Route.ComponentProps) {
 					)}
 				</span>
 				<div className="flex gap-2">
-					<ExportDialog entityType="notifications" />
+					<ExportDialog entityType="notification-destinations" />
 					<Button onClick={() => navigate("/notifications/create")}>
 						<Plus size={16} className="mr-2" />
 						Create Destination

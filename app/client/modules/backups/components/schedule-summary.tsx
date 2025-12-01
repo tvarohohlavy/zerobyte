@@ -126,7 +126,7 @@ export const ScheduleSummary = (props: Props) => {
 							<Pencil className="h-4 w-4 mr-2" />
 							<span className="sm:inline">Edit schedule</span>
 						</Button>
-						<ExportDialog entityType="backups" id={schedule.id} size="sm" triggerLabel="Export config" />
+						<ExportDialog entityType="backup-schedules" id={schedule.id} size="sm" triggerLabel="Export config" />
 						<Button
 							variant="outline"
 							size="sm"

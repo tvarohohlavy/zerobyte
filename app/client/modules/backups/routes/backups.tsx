@@ -122,7 +122,7 @@ export default function Backups({ loaderData }: Route.ComponentProps) {
 				</Link>
 				<Card className="flex flex-col items-center justify-center h-full hover:bg-muted/50 transition-colors cursor-pointer">
 					<CardContent className="flex flex-col items-center justify-center gap-2 h-full w-full">
-						<ExportDialog entityType="backups" variant="card" />
+						<ExportDialog entityType="backup-schedules" variant="card" />
 					</CardContent>
 				</Card>
 			</div>

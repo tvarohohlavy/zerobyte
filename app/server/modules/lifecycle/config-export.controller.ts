@@ -319,18 +319,18 @@ export const configExportController = new Hono()
 			return c.json({ error: "Failed to export repositories" }, 500);
 		}
 	})
-	.get("/export/notifications", async (c) => {
+	.get("/export/notification-destinations", async (c) => {
 		try {
 			const params = parseExportParams(c);
 			const result = await fetchNotifications(getFilterOptions(c));
 			if ("error" in result) return c.json({ error: result.error }, result.status);
 			return c.json({ notificationDestinations: await exportEntities(result.data, params) });
 		} catch (err) {
-			logger.error(`Notifications export failed: ${err instanceof Error ? err.message : String(err)}`);
-			return c.json({ error: "Failed to export notifications" }, 500);
+			logger.error(`Notification destinations export failed: ${err instanceof Error ? err.message : String(err)}`);
+			return c.json({ error: "Failed to export notification destinations" }, 500);
 		}
 	})
-	.get("/export/backups", async (c) => {
+	.get("/export/backup-schedules", async (c) => {
 		try {
 			const params = parseExportParams(c);
 
@@ -354,8 +354,8 @@ export const configExportController = new Hono()
 
 			return c.json({ backupSchedules });
 		} catch (err) {
-			logger.error(`Backups export failed: ${err instanceof Error ? err.message : String(err)}`);
-			return c.json({ error: "Failed to export backups" }, 500);
+			logger.error(`Backup schedules export failed: ${err instanceof Error ? err.message : String(err)}`);
+			return c.json({ error: "Failed to export backup schedules" }, 500);
 		}
 	});
 

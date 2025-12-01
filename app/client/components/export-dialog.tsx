@@ -79,7 +79,7 @@ async function exportFromApi(endpoint: string, filename: string, options: Export
 	downloadAsJson(data, filename);
 }
 
-export type ExportEntityType = "volumes" | "repositories" | "notifications" | "backups" | "full";
+export type ExportEntityType = "volumes" | "repositories" | "notification-destinations" | "backup-schedules" | "full";
 
 type ExportConfig = {
 	endpoint: string;
@@ -107,17 +107,17 @@ const exportConfigs: Record<ExportEntityType, ExportConfig> = {
 			return identifier ? `repository-${identifier}-config` : "repositories-config";
 		},
 	},
-	notifications: {
-		endpoint: "/api/v1/config/export/notifications",
-		label: "Notification",
-		labelPlural: "Notifications",
+	"notification-destinations": {
+		endpoint: "/api/v1/config/export/notification-destinations",
+		label: "Notification Destination",
+		labelPlural: "Notification Destinations",
 		getFilename: (opts) => {
 			const identifier = opts.id ?? opts.name;
-			return identifier ? `notification-${identifier}-config` : "notifications-config";
+			return identifier ? `notification-destination-${identifier}-config` : "notification-destinations-config";
 		},
 	},
-	backups: {
-		endpoint: "/api/v1/config/export/backups",
+	"backup-schedules": {
+		endpoint: "/api/v1/config/export/backup-schedules",
 		label: "Backup Schedule",
 		labelPlural: "Backup Schedules",
 		getFilename: (opts) => (opts.id ? `backup-schedule-${opts.id}-config` : "backup-schedules-config"),
@@ -176,7 +176,7 @@ export function ExportDialog({
 	const isSingleItem = !!(name || id);
 	const isFullExport = entityType === "full";
 	// TODO: Volumes will have encrypted secrets (e.g., SMB/NFS credentials) in a future PR
-	const hasSecrets = entityType !== "backups" && entityType !== "volumes";
+	const hasSecrets = entityType !== "backup-schedules" && entityType !== "volumes";
 	const entityLabel = isSingleItem ? config.label : config.labelPlural;
 	const requiresPassword = includeRecoveryKey || secretsMode === "cleartext";
 
