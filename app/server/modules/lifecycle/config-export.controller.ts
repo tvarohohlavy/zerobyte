@@ -43,10 +43,20 @@ function omitKeys<T extends Record<string, unknown>>(obj: T, keys: string[]): Pa
 	return result;
 }
 
-function getExcludeKeys(includeIds: boolean, includeTimestamps: boolean): string[] {
+function getExcludeKeys(includeIds: boolean, includeTimestamps: boolean, includeRuntimeState: boolean): string[] {
 	const idKeys = ["id", "volumeId", "repositoryId", "scheduleId", "destinationId"];
 	const timestampKeys = ["createdAt", "updatedAt"];
+	// Runtime state fields (status, health checks, last backup info, etc.)
+	const runtimeStateKeys = [
+		// Volume state
+		"status", "lastError", "lastHealthCheck",
+		// Repository state
+		"lastChecked",
+		// Backup schedule state
+		"lastBackupAt", "lastBackupStatus", "lastBackupError", "nextBackupAt",
+	];
 	return [
+		...(includeRuntimeState ? [] : runtimeStateKeys),
 		...(includeIds ? [] : idKeys),
 		...(includeTimestamps ? [] : timestampKeys),
 	];
@@ -56,8 +66,9 @@ function getExcludeKeys(includeIds: boolean, includeTimestamps: boolean): string
 function parseExportParams(c: Context): ExportParams {
 	const includeIds = c.req.query("includeIds") !== "false";
 	const includeTimestamps = c.req.query("includeTimestamps") !== "false";
+	const includeRuntimeState = c.req.query("includeRuntimeState") === "true";
 	const secretsMode = (c.req.query("secretsMode") as SecretsMode) || "exclude";
-	const excludeKeys = getExcludeKeys(includeIds, includeTimestamps);
+	const excludeKeys = getExcludeKeys(includeIds, includeTimestamps, includeRuntimeState);
 	return { includeIds, includeTimestamps, secretsMode, excludeKeys };
 }
 

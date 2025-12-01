@@ -26,6 +26,7 @@ export type SecretsMode = "exclude" | "encrypted" | "cleartext";
 export type ExportOptions = {
 	includeIds?: boolean;
 	includeTimestamps?: boolean;
+	includeRuntimeState?: boolean;
 	includeRecoveryKey?: boolean;
 	includePasswordHash?: boolean;
 	secretsMode?: SecretsMode;
@@ -49,6 +50,7 @@ async function exportFromApi(endpoint: string, filename: string, options: Export
 	const params = new URLSearchParams();
 	if (options.includeIds === false) params.set("includeIds", "false");
 	if (options.includeTimestamps === false) params.set("includeTimestamps", "false");
+	if (options.includeRuntimeState === true) params.set("includeRuntimeState", "true");
 	if (options.includeRecoveryKey === true) params.set("includeRecoveryKey", "true");
 	if (options.includePasswordHash === true) params.set("includePasswordHash", "true");
 	if (options.secretsMode && options.secretsMode !== "exclude") params.set("secretsMode", options.secretsMode);
@@ -150,6 +152,7 @@ export function ExportDialog({
 	const [open, setOpen] = useState(false);
 	const [includeIds, setIncludeIds] = useState(true);
 	const [includeTimestamps, setIncludeTimestamps] = useState(true);
+	const [includeRuntimeState, setIncludeRuntimeState] = useState(false);
 	const [includeRecoveryKey, setIncludeRecoveryKey] = useState(false);
 	const [includePasswordHash, setIncludePasswordHash] = useState(false);
 	const [secretsMode, setSecretsMode] = useState<SecretsMode>("exclude");
@@ -168,6 +171,7 @@ export function ExportDialog({
 			await exportConfig(entityType, {
 				includeIds,
 				includeTimestamps,
+				includeRuntimeState,
 				includeRecoveryKey: isFullExport ? includeRecoveryKey : undefined,
 				includePasswordHash: isFullExport ? includePasswordHash : undefined,
 				secretsMode: hasSecrets ? secretsMode : undefined,
@@ -240,6 +244,20 @@ export function ExportDialog({
 					</div>
 					<p className="text-xs text-muted-foreground ml-7">
 						Include createdAt and updatedAt timestamps. Disable for cleaner exports when timestamps aren't needed.
+					</p>
+
+					<div className="flex items-center space-x-3">
+						<Checkbox
+							id="includeRuntimeState"
+							checked={includeRuntimeState}
+							onCheckedChange={(checked) => setIncludeRuntimeState(checked === true)}
+						/>
+						<Label htmlFor="includeRuntimeState" className="cursor-pointer">
+							Include runtime state
+						</Label>
+					</div>
+					<p className="text-xs text-muted-foreground ml-7">
+						Include current status, health checks, and last backup information. Usually not needed for migration.
 					</p>
 
 					{hasSecrets && (
