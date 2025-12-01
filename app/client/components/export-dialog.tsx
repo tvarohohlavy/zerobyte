@@ -330,9 +330,11 @@ export function ExportDialog({
 						<DialogHeader>
 							<DialogTitle>Export {entityLabel}</DialogTitle>
 							<DialogDescription>
-								{isSingleItem
-									? `Export the configuration for this ${config.label.toLowerCase()}.`
-									: `Export all ${config.labelPlural.toLowerCase()} configurations.`}
+								{isFullExport
+									? "Export the complete Zerobyte configuration including all volumes, repositories, backup schedules, and notifications."
+									: isSingleItem
+										? `Export the configuration for this ${config.label.toLowerCase()}.`
+										: `Export all ${config.labelPlural.toLowerCase()} configurations.`}
 							</DialogDescription>
 						</DialogHeader>
 
