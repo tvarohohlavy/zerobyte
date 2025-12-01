@@ -191,7 +191,7 @@ export function ExportDialog({
 
 	const defaultTrigger =
 		variant === "card" ? (
-			<div className="flex flex-col items-center justify-center gap-2 cursor-pointer">
+			<div className="flex flex-col items-center justify-center gap-2 cursor-pointer h-full w-full">
 				<Download className="h-8 w-8 text-muted-foreground" />
 				<span className="text-sm font-medium text-muted-foreground">
 					{triggerLabel ?? `Export ${isSingleItem ? "config" : "configs"}`}
