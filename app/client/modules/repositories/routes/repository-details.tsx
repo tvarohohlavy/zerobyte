@@ -160,7 +160,6 @@ export default function RepositoryDetailsPage({ loaderData }: Route.ComponentPro
 					</Button>
 					<ExportDialog entityType="repositories" name={data.name} triggerLabel="Export config" />
 					<Button variant="destructive" onClick={() => setShowDeleteConfirm(true)} disabled={deleteRepo.isPending}>
-						<Trash2 className="h-4 w-4 mr-2" />
 						Delete
 					</Button>
 				</div>
