@@ -164,7 +164,6 @@ export default function VolumeDetails({ loaderData }: Route.ComponentProps) {
 					</Button>
 					<ExportDialog entityType="volumes" id={volume.id} name={volume.name} triggerLabel="Export config" />
 					<Button variant="destructive" onClick={() => setShowDeleteConfirm(true)} disabled={deleteVol.isPending}>
-						<Trash2 className="h-4 w-4 mr-2" />
 						Delete
 					</Button>
 				</div>
