@@ -139,16 +139,30 @@ export async function exportConfig(
 	await exportFromApi(config.endpoint, filename, options);
 }
 
-type ExportDialogProps = {
+type BaseExportDialogProps = {
 	entityType: ExportEntityType;
 	name?: string;
 	id?: string | number;
-	trigger?: React.ReactNode;
+};
+
+type ExportDialogWithTrigger = BaseExportDialogProps & {
+	/** Custom trigger element. When provided, variant/size/triggerLabel/showIcon are ignored. */
+	trigger: React.ReactNode;
+	variant?: never;
+	size?: never;
+	triggerLabel?: never;
+	showIcon?: never;
+};
+
+type ExportDialogWithDefaultTrigger = BaseExportDialogProps & {
+	trigger?: never;
 	variant?: "default" | "outline" | "ghost" | "card";
 	size?: "default" | "sm" | "lg" | "icon";
 	triggerLabel?: string;
 	showIcon?: boolean;
 };
+
+type ExportDialogProps = ExportDialogWithTrigger | ExportDialogWithDefaultTrigger;
 
 export function ExportDialog({
 	entityType,
