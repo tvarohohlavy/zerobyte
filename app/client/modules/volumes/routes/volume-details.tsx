@@ -25,6 +25,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "~/client/components/ui/
 import { useSystemInfo } from "~/client/hooks/use-system-info";
 import { getVolume } from "~/client/api-client";
 import type { VolumeStatus } from "~/client/lib/types";
+import { Trash2 } from "lucide-react";
+import { ExportDialog } from "~/client/components/export-dialog";
 import {
 	deleteVolumeMutation,
 	getVolumeOptions,
@@ -160,7 +162,9 @@ export default function VolumeDetails({ loaderData }: Route.ComponentProps) {
 					>
 						Unmount
 					</Button>
+					<ExportDialog entityType="volumes" name={volume.name} triggerLabel="Export config" />
 					<Button variant="destructive" onClick={() => setShowDeleteConfirm(true)} disabled={deleteVol.isPending}>
+						<Trash2 className="h-4 w-4 mr-2" />
 						Delete
 					</Button>
 				</div>
