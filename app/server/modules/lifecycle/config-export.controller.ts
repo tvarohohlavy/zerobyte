@@ -109,7 +109,15 @@ async function processSecrets(
 					delete result[key];
 				}
 			}
-		} else if (value && typeof value === "object" && !Array.isArray(value)) {
+		} else if (Array.isArray(value)) {
+			result[key] = await Promise.all(
+				value.map(async (item) =>
+					item && typeof item === "object" && !Array.isArray(item)
+						? processSecrets(item as Record<string, unknown>, secretsMode)
+						: item
+				)
+			);
+		} else if (value && typeof value === "object") {
 			result[key] = await processSecrets(value as Record<string, unknown>, secretsMode);
 		}
 	}
