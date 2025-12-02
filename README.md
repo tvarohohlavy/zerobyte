@@ -215,7 +215,7 @@ To export, click the "Export" button on any list page or detail page. A dialog w
 - **Include recovery key** (full export only) - Include the master encryption key for all repositories
 - **Include password hash** (full export only) - Include the hashed admin password for seamless migration
 
-When exporting sensitive data (recovery key or decrypted secrets), you'll be prompted to re-enter your password as an additional security confirmation. This is a UI-level safeguard to prevent accidental exports of sensitive information.
+All exports require password verification for security. You must enter your password to confirm your identity before any configuration can be exported.
 
 Exports are downloaded as JSON files that can be used for reference or future import functionality.
 

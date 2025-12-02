@@ -1,24 +1,44 @@
+import { validator } from "hono-openapi";
+
 import { Hono } from "hono";
 import type { Context } from "hono";
-import { eq } from "drizzle-orm";
+import { deleteCookie, getCookie } from "hono/cookie";
 import {
 	backupSchedulesTable,
-	notificationDestinationsTable,
-	repositoriesTable,
 	backupScheduleNotificationsTable,
 	usersTable,
-	volumesTable,
 } from "../../db/schema";
 import { db } from "../../db/db";
 import { logger } from "../../utils/logger";
 import { RESTIC_PASS_FILE } from "../../core/constants";
 import { cryptoUtils } from "../../utils/crypto";
+import { authService } from "../auth/auth.service";
+import { volumeService } from "../volumes/volume.service";
+import { repositoriesService } from "../repositories/repositories.service";
+import { notificationsService } from "../notifications/notifications.service";
+import { backupsService } from "../backups/backups.service";
+import {
+	fullExportBodySchema,
+	entityExportBodySchema,
+	backupScheduleExportBodySchema,
+	fullExportDto,
+	volumesExportDto,
+	repositoriesExportDto,
+	notificationsExportDto,
+	backupSchedulesExportDto,
+	type SecretsMode,
+	type FullExportBody,
+	type EntityExportBody,
+	type BackupScheduleExportBody,
+} from "./config-export.dto";
 
-// ============================================================================
-// Types
-// ============================================================================
-
-type SecretsMode = "exclude" | "encrypted" | "cleartext";
+const COOKIE_NAME = "session_id";
+const COOKIE_OPTIONS = {
+	httpOnly: true,
+	secure: false,
+	sameSite: "lax" as const,
+	path: "/",
+};
 
 type ExportParams = {
 	includeIds: boolean;
@@ -26,14 +46,6 @@ type ExportParams = {
 	secretsMode: SecretsMode;
 	excludeKeys: string[];
 };
-
-type FilterOptions = { id?: string; name?: string };
-
-type FetchResult<T> = { data: T[] } | { error: string; status: 400 | 404 };
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
 
 function omitKeys<T extends Record<string, unknown>>(obj: T, keys: string[]): Partial<T> {
 	const result = { ...obj };
@@ -66,25 +78,46 @@ function getExcludeKeys(includeIds: boolean, includeTimestamps: boolean, include
 	];
 }
 
-/** Parse common export query parameters from request */
-function parseExportParams(c: Context): ExportParams {
-	const includeIds = c.req.query("includeIds") !== "false";
-	const includeTimestamps = c.req.query("includeTimestamps") !== "false";
-	const includeRuntimeState = c.req.query("includeRuntimeState") === "true";
-	const secretsModeRaw = c.req.query("secretsMode");
-	const allowedSecretsModes: SecretsMode[] = ["exclude", "encrypted", "cleartext"];
-	const secretsMode: SecretsMode = secretsModeRaw
-		? (allowedSecretsModes.includes(secretsModeRaw as SecretsMode)
-			? (secretsModeRaw as SecretsMode)
-			: (() => { throw new Error("Invalid secretsMode parameter"); })())
-		: "exclude";
+/** Parse export params from request body */
+function parseExportParamsFromBody(body: {
+	includeIds?: boolean;
+	includeTimestamps?: boolean;
+	includeRuntimeState?: boolean;
+	secretsMode?: SecretsMode;
+}): ExportParams {
+	const includeIds = body.includeIds !== false;
+	const includeTimestamps = body.includeTimestamps !== false;
+	const includeRuntimeState = body.includeRuntimeState === true;
+	const secretsMode: SecretsMode = body.secretsMode ?? "exclude";
 	const excludeKeys = getExcludeKeys(includeIds, includeTimestamps, includeRuntimeState);
 	return { includeIds, includeTimestamps, secretsMode, excludeKeys };
 }
 
-/** Get filter options from request query params */
-function getFilterOptions(c: Context): FilterOptions {
-	return { id: c.req.query("id"), name: c.req.query("name") };
+/**
+ * Verify password for export operation.
+ * All exports require password verification for security.
+ */
+async function verifyExportPassword(
+	c: Context,
+	password: string
+): Promise<{ valid: true; userId: number } | { valid: false; error: string }> {
+	const sessionId = getCookie(c, COOKIE_NAME);
+	if (!sessionId) {
+		return { valid: false, error: "Not authenticated" };
+	}
+
+	const session = await authService.verifySession(sessionId);
+	if (!session) {
+		deleteCookie(c, COOKIE_NAME, COOKIE_OPTIONS);
+		return { valid: false, error: "Session expired" };
+	}
+
+	const isValid = await authService.verifyPassword(session.user.id, password);
+	if (!isValid) {
+		return { valid: false, error: "Incorrect password" };
+	}
+
+	return { valid: true, userId: session.user.id };
 }
 
 /**
@@ -146,72 +179,6 @@ async function exportEntities<T extends Record<string, unknown>>(
 	return Promise.all(entities.map((e) => exportEntity(e as Record<string, unknown>, params)));
 }
 
-// ============================================================================
-// Data Fetchers with Filtering
-// ============================================================================
-
-async function fetchVolumes(filter: FilterOptions): Promise<FetchResult<typeof volumesTable.$inferSelect>> {
-	if (filter.id) {
-		const id = Number.parseInt(filter.id, 10);
-		if (Number.isNaN(id)) return { error: "Invalid volume ID", status: 400 };
-		const result = await db.select().from(volumesTable).where(eq(volumesTable.id, id));
-		if (result.length === 0) return { error: `Volume with ID '${filter.id}' not found`, status: 404 };
-		return { data: result };
-	}
-	if (filter.name) {
-		const result = await db.select().from(volumesTable).where(eq(volumesTable.name, filter.name));
-		if (result.length === 0) return { error: `Volume '${filter.name}' not found`, status: 404 };
-		return { data: result };
-	}
-	return { data: await db.select().from(volumesTable) };
-}
-
-async function fetchRepositories(filter: FilterOptions): Promise<FetchResult<typeof repositoriesTable.$inferSelect>> {
-	if (filter.id) {
-		// Validate UUID format
-		const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-		if (!uuidRegex.test(filter.id)) {
-			return { error: "Invalid repository ID format (expected UUID)", status: 400 };
-		}
-		const result = await db.select().from(repositoriesTable).where(eq(repositoriesTable.id, filter.id));
-		if (result.length === 0) return { error: `Repository with ID '${filter.id}' not found`, status: 404 };
-		return { data: result };
-	}
-	if (filter.name) {
-		const result = await db.select().from(repositoriesTable).where(eq(repositoriesTable.name, filter.name));
-		if (result.length === 0) return { error: `Repository '${filter.name}' not found`, status: 404 };
-		return { data: result };
-	}
-	return { data: await db.select().from(repositoriesTable) };
-}
-
-async function fetchNotifications(filter: FilterOptions): Promise<FetchResult<typeof notificationDestinationsTable.$inferSelect>> {
-	if (filter.id) {
-		const id = Number.parseInt(filter.id, 10);
-		if (Number.isNaN(id)) return { error: "Invalid notification destination ID", status: 400 };
-		const result = await db.select().from(notificationDestinationsTable).where(eq(notificationDestinationsTable.id, id));
-		if (result.length === 0) return { error: `Notification destination with ID '${filter.id}' not found`, status: 404 };
-		return { data: result };
-	}
-	if (filter.name) {
-		const result = await db.select().from(notificationDestinationsTable).where(eq(notificationDestinationsTable.name, filter.name));
-		if (result.length === 0) return { error: `Notification destination '${filter.name}' not found`, status: 404 };
-		return { data: result };
-	}
-	return { data: await db.select().from(notificationDestinationsTable) };
-}
-
-async function fetchBackupSchedules(filter: { id?: string }): Promise<FetchResult<typeof backupSchedulesTable.$inferSelect>> {
-	if (filter.id) {
-		const id = Number.parseInt(filter.id, 10);
-		if (Number.isNaN(id)) return { error: "Invalid backup schedule ID", status: 400 };
-		const result = await db.select().from(backupSchedulesTable).where(eq(backupSchedulesTable.id, id));
-		if (result.length === 0) return { error: `Backup schedule with ID '${filter.id}' not found`, status: 404 };
-		return { data: result };
-	}
-	return { data: await db.select().from(backupSchedulesTable) };
-}
-
 /** Transform backup schedules with resolved names and notifications */
 function transformBackupSchedules(
 	schedules: typeof backupSchedulesTable.$inferSelect[],
@@ -241,34 +208,27 @@ function transformBackupSchedules(
 	});
 }
 
-// ============================================================================
-// Controller
-// ============================================================================
-
-/**
- * Config Export API
- * 
- * Query parameters:
- * - includeIds: "true" | "false" (default: "true") - Include database IDs
- * - includeTimestamps: "true" | "false" (default: "true") - Include createdAt/updatedAt
- * - includeRecoveryKey: "true" | "false" (default: "false") - Include recovery key (full export only)
- * - includePasswordHash: "true" | "false" (default: "false") - Include admin password hash (full export only)
- * - secretsMode: "exclude" | "encrypted" | "cleartext" (default: "exclude") - How to handle secrets
- * - id: string (optional) - Filter by ID
- * - name: string (optional) - Filter by name (not for backups)
- */
 export const configExportController = new Hono()
-	.get("/export", async (c) => {
+	.post("/export", fullExportDto, validator("json", fullExportBodySchema), async (c) => {
 		try {
-			const params = parseExportParams(c);
-			const includeRecoveryKey = c.req.query("includeRecoveryKey") === "true";
-			const includePasswordHash = c.req.query("includePasswordHash") === "true";
+			const body = c.req.valid("json") as FullExportBody;
 
+			// Verify password - required for all exports
+			const verification = await verifyExportPassword(c, body.password);
+			if (!verification.valid) {
+				return c.json({ error: verification.error }, 401);
+			}
+
+			const params = parseExportParamsFromBody(body);
+			const includeRecoveryKey = body.includeRecoveryKey === true;
+			const includePasswordHash = body.includePasswordHash === true;
+
+			// Use services to fetch data
 			const [volumes, repositories, backupSchedulesRaw, notifications, scheduleNotifications, [admin]] = await Promise.all([
-				db.select().from(volumesTable),
-				db.select().from(repositoriesTable),
-				db.select().from(backupSchedulesTable),
-				db.select().from(notificationDestinationsTable),
+				volumeService.listVolumes(),
+				repositoriesService.listRepositories(),
+				backupsService.listSchedules(),
+				notificationsService.listDestinations(),
 				db.select().from(backupScheduleNotificationsTable),
 				db.select().from(usersTable).limit(1),
 			]);
@@ -281,9 +241,6 @@ export const configExportController = new Hono()
 				backupSchedulesRaw, scheduleNotifications, volumeMap, repoMap, notificationMap, params
 			);
 
-			// WARNING: As of now, volume exports may include sensitive data (e.g., SMB/NFS credentials) in cleartext.
-			// This is a known security limitation. Handle exported configuration files with care.
-			// Future PRs will implement encryption for these secrets.
 			const [exportVolumes, exportRepositories, exportNotifications] = await Promise.all([
 				exportEntities(volumes, params),
 				exportEntities(repositories, params),
@@ -318,60 +275,169 @@ export const configExportController = new Hono()
 			return c.json({ error: err instanceof Error ? err.message : "Failed to export config" }, 500);
 		}
 	})
-	.get("/export/volumes", async (c) => {
+	.post("/export/volumes", volumesExportDto, validator("json", entityExportBodySchema), async (c) => {
 		try {
-			const params = parseExportParams(c);
-			const result = await fetchVolumes(getFilterOptions(c));
-			if ("error" in result) return c.json({ error: result.error }, result.status);
-			// TODO: Volumes will have encrypted secrets (e.g., SMB/NFS credentials) in a future PR
-			return c.json({ volumes: await exportEntities(result.data, params) });
+			const body = c.req.valid("json") as EntityExportBody;
+
+			// Verify password - required for all exports
+			const verification = await verifyExportPassword(c, body.password);
+			if (!verification.valid) {
+				return c.json({ error: verification.error }, 401);
+			}
+
+			const params = parseExportParamsFromBody(body);
+
+			let volumes;
+			// Prefer name over id since volumeService.getVolume expects name (slug)
+			if (body.name) {
+				try {
+					const result = await volumeService.getVolume(body.name);
+					volumes = [result.volume];
+				} catch {
+					return c.json({ error: `Volume '${body.name}' not found` }, 404);
+				}
+			} else if (body.id !== undefined) {
+				// If only ID provided, find volume by numeric ID from list
+				const id = typeof body.id === "string" ? Number.parseInt(body.id, 10) : body.id;
+				if (Number.isNaN(id)) {
+					return c.json({ error: "Invalid volume ID" }, 400);
+				}
+				const allVolumes = await volumeService.listVolumes();
+				const volume = allVolumes.find((v) => v.id === id);
+				if (!volume) {
+					return c.json({ error: `Volume with ID '${body.id}' not found` }, 404);
+				}
+				volumes = [volume];
+			} else {
+				volumes = await volumeService.listVolumes();
+			}
+
+			return c.json({ volumes: await exportEntities(volumes, params) });
 		} catch (err) {
 			logger.error(`Volumes export failed: ${err instanceof Error ? err.message : String(err)}`);
 			return c.json({ error: `Failed to export volumes: ${err instanceof Error ? err.message : String(err)}` }, 500);
 		}
 	})
-	.get("/export/repositories", async (c) => {
+	.post("/export/repositories", repositoriesExportDto, validator("json", entityExportBodySchema), async (c) => {
 		try {
-			const params = parseExportParams(c);
-			const result = await fetchRepositories(getFilterOptions(c));
-			if ("error" in result) return c.json({ error: result.error }, result.status);
-			return c.json({ repositories: await exportEntities(result.data, params) });
+			const body = c.req.valid("json") as EntityExportBody;
+
+			// Verify password - required for all exports
+			const verification = await verifyExportPassword(c, body.password);
+			if (!verification.valid) {
+				return c.json({ error: verification.error }, 401);
+			}
+
+			const params = parseExportParamsFromBody(body);
+
+			let repositories;
+			// Prefer name over id since repositoriesService.getRepository expects name (slug)
+			if (body.name) {
+				try {
+					const result = await repositoriesService.getRepository(body.name);
+					repositories = [result.repository];
+				} catch {
+					return c.json({ error: `Repository '${body.name}' not found` }, 404);
+				}
+			} else if (body.id !== undefined) {
+				// If only ID provided, find repository by ID from list
+				// Repository IDs are strings (UUIDs), not numeric
+				const allRepositories = await repositoriesService.listRepositories();
+				const repository = allRepositories.find((r) => r.id === String(body.id));
+				if (!repository) {
+					return c.json({ error: `Repository with ID '${body.id}' not found` }, 404);
+				}
+				repositories = [repository];
+			} else {
+				repositories = await repositoriesService.listRepositories();
+			}
+
+			return c.json({ repositories: await exportEntities(repositories, params) });
 		} catch (err) {
 			logger.error(`Repositories export failed: ${err instanceof Error ? err.message : String(err)}`);
 			return c.json({ error: `Failed to export repositories: ${err instanceof Error ? err.message : String(err)}` }, 500);
 		}
 	})
-	.get("/export/notification-destinations", async (c) => {
+	.post("/export/notification-destinations", notificationsExportDto, validator("json", entityExportBodySchema), async (c) => {
 		try {
-			const params = parseExportParams(c);
-			const result = await fetchNotifications(getFilterOptions(c));
-			if ("error" in result) return c.json({ error: result.error }, result.status);
-			return c.json({ notificationDestinations: await exportEntities(result.data, params) });
+			const body = c.req.valid("json") as EntityExportBody;
+
+			// Verify password - required for all exports
+			const verification = await verifyExportPassword(c, body.password);
+			if (!verification.valid) {
+				return c.json({ error: verification.error }, 401);
+			}
+
+			const params = parseExportParamsFromBody(body);
+
+			let notifications;
+			if (body.id !== undefined) {
+				const id = typeof body.id === "string" ? Number.parseInt(body.id, 10) : body.id;
+				if (Number.isNaN(id)) {
+					return c.json({ error: "Invalid notification destination ID" }, 400);
+				}
+				try {
+					const destination = await notificationsService.getDestination(id);
+					notifications = [destination];
+				} catch {
+					return c.json({ error: `Notification destination with ID '${body.id}' not found` }, 404);
+				}
+			} else if (body.name) {
+				// notificationsService doesn't have getByName, so we list and filter
+				const allDestinations = await notificationsService.listDestinations();
+				const destination = allDestinations.find((d) => d.name === body.name);
+				if (!destination) {
+					return c.json({ error: `Notification destination '${body.name}' not found` }, 404);
+				}
+				notifications = [destination];
+			} else {
+				notifications = await notificationsService.listDestinations();
+			}
+
+			return c.json({ notificationDestinations: await exportEntities(notifications, params) });
 		} catch (err) {
 			logger.error(`Notification destinations export failed: ${err instanceof Error ? err.message : String(err)}`);
 			return c.json({ error: `Failed to export notification destinations: ${err instanceof Error ? err.message : String(err)}` }, 500);
 		}
 	})
-	.get("/export/backup-schedules", async (c) => {
+	.post("/export/backup-schedules", backupSchedulesExportDto, validator("json", backupScheduleExportBodySchema), async (c) => {
 		try {
-			const params = parseExportParams(c);
+			const body = c.req.valid("json") as BackupScheduleExportBody;
 
+			// Verify password - required for all exports
+			const verification = await verifyExportPassword(c, body.password);
+			if (!verification.valid) {
+				return c.json({ error: verification.error }, 401);
+			}
+
+			const params = parseExportParamsFromBody(body);
+
+			// Get all related data for name resolution
 			const [volumes, repositories, notifications, scheduleNotifications] = await Promise.all([
-				db.select().from(volumesTable),
-				db.select().from(repositoriesTable),
-				db.select().from(notificationDestinationsTable),
+				volumeService.listVolumes(),
+				repositoriesService.listRepositories(),
+				notificationsService.listDestinations(),
 				db.select().from(backupScheduleNotificationsTable),
 			]);
 
-			const result = await fetchBackupSchedules({ id: c.req.query("id") });
-			if ("error" in result) return c.json({ error: result.error }, result.status);
+			let schedules;
+			if (body.id !== undefined) {
+				try {
+					const schedule = await backupsService.getSchedule(body.id);
+					schedules = [schedule];
+				} catch {
+					return c.json({ error: `Backup schedule with ID '${body.id}' not found` }, 404);
+				}
+			} else {
+				schedules = await backupsService.listSchedules();
+			}
 
 			const volumeMap = new Map<number, string>(volumes.map((v) => [v.id, v.name]));
 			const repoMap = new Map<string, string>(repositories.map((r) => [r.id, r.name]));
 			const notificationMap = new Map<number, string>(notifications.map((n) => [n.id, n.name]));
 
 			const backupSchedules = transformBackupSchedules(
-				result.data, scheduleNotifications, volumeMap, repoMap, notificationMap, params
+				schedules, scheduleNotifications, volumeMap, repoMap, notificationMap, params
 			);
 
 			return c.json({ backupSchedules });
