@@ -18,42 +18,32 @@ const listRepositories = async () => {
 const encryptConfig = async (config: RepositoryConfig): Promise<RepositoryConfig> => {
 	const encryptedConfig: Record<string, string | boolean | number> = { ...config };
 
-	if (config.customPassword && !cryptoUtils.isEncrypted(config.customPassword)) {
+	if (config.customPassword) {
 		encryptedConfig.customPassword = await cryptoUtils.encrypt(config.customPassword);
 	}
 
 	switch (config.backend) {
 		case "s3":
 		case "r2":
-			if (!cryptoUtils.isEncrypted(config.accessKeyId)) {
 				encryptedConfig.accessKeyId = await cryptoUtils.encrypt(config.accessKeyId);
-			}
-			if (!cryptoUtils.isEncrypted(config.secretAccessKey)) {
 				encryptedConfig.secretAccessKey = await cryptoUtils.encrypt(config.secretAccessKey);
-			}
 			break;
 		case "gcs":
-			if (!cryptoUtils.isEncrypted(config.credentialsJson)) {
 				encryptedConfig.credentialsJson = await cryptoUtils.encrypt(config.credentialsJson);
-			}
 			break;
 		case "azure":
-			if (!cryptoUtils.isEncrypted(config.accountKey)) {
 				encryptedConfig.accountKey = await cryptoUtils.encrypt(config.accountKey);
-			}
 			break;
 		case "rest":
-			if (config.username && !cryptoUtils.isEncrypted(config.username)) {
+			if (config.username) {
 				encryptedConfig.username = await cryptoUtils.encrypt(config.username);
 			}
-			if (config.password && !cryptoUtils.isEncrypted(config.password)) {
+			if (config.password) {
 				encryptedConfig.password = await cryptoUtils.encrypt(config.password);
 			}
 			break;
 		case "sftp":
-			if (!cryptoUtils.isEncrypted(config.privateKey)) {
 				encryptedConfig.privateKey = await cryptoUtils.encrypt(config.privateKey);
-			}
 			break;
 	}
 
