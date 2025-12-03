@@ -17,7 +17,7 @@ const encrypt = async (data: string) => {
 		return data;
 	}
 
-	if (data.startsWith(encryptionPrefix)) {
+	if (isEncrypted(data)) {
 		return data;
 	}
 
@@ -38,6 +38,10 @@ const encrypt = async (data: string) => {
  * Given an encrypted string, decrypts it using the salt stored in the string
  */
 const decrypt = async (encryptedData: string) => {
+	if (!isEncrypted(encryptedData)) {
+		return encryptedData;
+	}
+
 	const secret = await Bun.file(RESTIC_PASS_FILE).text();
 
 	const parts = encryptedData.split(":").slice(1); // Remove prefix
