@@ -37,9 +37,8 @@ const mount = async (config: BackendConfig, path: string) => {
 		const password = await cryptoUtils.decrypt(config.password);
 
 		const source = `//${config.server}/${config.share}`;
-		const options = [
+		const baseOptions = [
 			`user=${config.username}`,
-			`pass=${password}`,
 			`vers=${config.vers}`,
 			`port=${config.port}`,
 			"uid=1000",
@@ -47,18 +46,22 @@ const mount = async (config: BackendConfig, path: string) => {
 		];
 
 		if (config.domain) {
-			options.push(`domain=${config.domain}`);
+			baseOptions.push(`domain=${config.domain}`);
 		}
 
 		if (config.readOnly) {
-			options.push("ro");
+			baseOptions.push("ro");
 		}
 
-		const args = ["-t", "cifs", "-o", options.join(","), source, path];
+		const baseArgs = ["-t", "cifs", "-o"];
 
 		logger.debug(`Mounting SMB volume ${path}...`);
-		logger.info(`Executing mount: mount ${args.join(" ")}`);
+		const safeOptions = [...baseOptions, "pass=***"];
+		const safeArgs = [...baseArgs, safeOptions.join(","), source, path];
+		logger.info(`Executing mount: mount ${safeArgs.join(" ")}`);
 
+		const options = [...baseOptions, `pass=${password}`];
+		const args = [...baseArgs, options.join(","), source, path];
 		await executeMount(args);
 
 		logger.info(`SMB volume at ${path} mounted successfully.`);
