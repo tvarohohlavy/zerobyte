@@ -281,6 +281,12 @@ const backup = async (
 		}
 	}
 
+	if (options?.excludeIfPresent && options.excludeIfPresent.length > 0) {
+		for (const filename of options.excludeIfPresent) {
+			args.push("--exclude-if-present", filename);
+		}
+	}
+
 	addCommonArgs(args, env);
 
 	const logData = throttle((data: string) => {
