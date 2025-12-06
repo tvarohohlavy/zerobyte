@@ -1,7 +1,7 @@
 import { arktypeResolver } from "@hookform/resolvers/arktype";
 import { useMutation } from "@tanstack/react-query";
 import { type } from "arktype";
-import { CheckCircle, Loader2, XCircle } from "lucide-react";
+import { CheckCircle, Loader2, Pencil, Plug, Save, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { cn, slugify } from "~/client/lib/utils";
@@ -152,6 +152,7 @@ export const CreateVolumeForm = ({ onSubmit, mode = "create", initialValues, for
 													<div className="text-sm font-mono break-all">{field.value}</div>
 												</div>
 												<Button type="button" variant="outline" size="sm" onClick={() => field.onChange("")}>
+													<Pencil className="h-4 w-4 mr-2" />
 													Change
 												</Button>
 											</div>
@@ -561,6 +562,7 @@ export const CreateVolumeForm = ({ onSubmit, mode = "create", initialValues, for
 								{!testBackendConnection.isPending && testMessage && !testMessage.success && (
 									<XCircle className="mr-2 h-4 w-4 text-red-500" />
 								)}
+								{!testBackendConnection.isPending && !testMessage && <Plug className="mr-2 h-4 w-4" />}
 								{testBackendConnection.isPending
 									? "Testing..."
 									: testMessage
@@ -584,6 +586,7 @@ export const CreateVolumeForm = ({ onSubmit, mode = "create", initialValues, for
 				)}
 				{mode === "update" && (
 					<Button type="submit" className="w-full" loading={loading}>
+						<Save className="h-4 w-4 mr-2" />
 						Save Changes
 					</Button>
 				)}

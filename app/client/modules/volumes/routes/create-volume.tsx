@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { HardDrive } from "lucide-react";
+import { HardDrive, Plus } from "lucide-react";
 import { useId } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -73,6 +73,7 @@ export default function CreateVolume() {
 							Cancel
 						</Button>
 						<Button type="submit" form={formId} loading={createVolume.isPending}>
+							<Plus className="h-4 w-4 mr-2" />
 							Create Volume
 						</Button>
 					</div>

@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { useState } from "react";
+import { Plug, Unplug } from "lucide-react";
 import { StatusDot } from "~/client/components/status-dot";
 import { Button } from "~/client/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/client/components/ui/tabs";
@@ -148,6 +149,7 @@ export default function VolumeDetails({ loaderData }: Route.ComponentProps) {
 						loading={mountVol.isPending}
 						className={cn({ hidden: volume.status === "mounted" })}
 					>
+						<Plug className="h-4 w-4 mr-2" />
 						Mount
 					</Button>
 					<Button
@@ -156,6 +158,7 @@ export default function VolumeDetails({ loaderData }: Route.ComponentProps) {
 						loading={unmountVol.isPending}
 						className={cn({ hidden: volume.status !== "mounted" })}
 					>
+						<Unplug className="h-4 w-4 mr-2" />
 						Unmount
 					</Button>
 					<Button variant="destructive" onClick={() => setShowDeleteConfirm(true)} disabled={deleteVol.isPending}>

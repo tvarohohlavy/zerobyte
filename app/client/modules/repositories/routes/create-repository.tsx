@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { Database } from "lucide-react";
+import { Database, Plus } from "lucide-react";
 import { useId } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -79,7 +79,8 @@ export default function CreateRepository() {
 							Cancel
 						</Button>
 						<Button type="submit" form={formId} loading={createRepository.isPending}>
-							Create Repository
+							<Plus className="h-4 w-4 mr-2" />
+							Create repository
 						</Button>
 					</div>
 				</CardContent>

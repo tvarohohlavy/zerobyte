@@ -2,6 +2,7 @@ import { arktypeResolver } from "@hookform/resolvers/arktype";
 import { type } from "arktype";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { Check, Pencil, Save, X } from "lucide-react";
 import { cn, slugify } from "~/client/lib/utils";
 import { deepClean } from "~/utils/object";
 import { Button } from "./ui/button";
@@ -267,6 +268,7 @@ export const CreateRepositoryForm = ({
 									{form.watch("path") || "/var/lib/zerobyte/repositories"}
 								</div>
 								<Button type="button" variant="outline" onClick={() => setShowPathWarning(true)} size="sm">
+									<Pencil className="h-4 w-4 mr-2" />
 									Change
 								</Button>
 							</div>
@@ -278,7 +280,7 @@ export const CreateRepositoryForm = ({
 								<AlertDialogHeader>
 									<AlertDialogTitle className="flex items-center gap-2">
 										<AlertTriangle className="h-5 w-5 text-yellow-500" />
-										Important: Host Mount Required
+										Important: Host mount required
 									</AlertDialogTitle>
 									<AlertDialogDescription className="space-y-3">
 										<p>When selecting a custom path, ensure it is mounted from the host machine into the container.</p>
@@ -320,8 +322,14 @@ export const CreateRepositoryForm = ({
 									/>
 								</div>
 								<AlertDialogFooter>
-									<AlertDialogCancel>Cancel</AlertDialogCancel>
-									<AlertDialogAction onClick={() => setShowPathBrowser(false)}>Done</AlertDialogAction>
+									<AlertDialogCancel>
+										<X className="h-4 w-4 mr-2" />
+										Cancel
+									</AlertDialogCancel>
+									<AlertDialogAction onClick={() => setShowPathBrowser(false)}>
+										<Check className="h-4 w-4 mr-2" />
+										Done
+									</AlertDialogAction>
 								</AlertDialogFooter>
 							</AlertDialogContent>
 						</AlertDialog>
@@ -775,6 +783,7 @@ export const CreateRepositoryForm = ({
 
 				{mode === "update" && (
 					<Button type="submit" className="w-full" loading={loading}>
+						<Save className="h-4 w-4 mr-2" />
 						Save Changes
 					</Button>
 				)}
