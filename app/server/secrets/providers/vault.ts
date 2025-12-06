@@ -215,8 +215,6 @@ export class HashiCorpVaultProvider extends BaseSecretProvider implements Browsa
 			}
 			// Check for connection errors
 			if (message.includes("ECONNREFUSED") || message.includes("ENOTFOUND") || message.includes("fetch failed")) {
-				throw new Error(`Connection failed to ${this.addr}: ${message}. Check that Vault is running and accessible.`);
-("ECONNREFUSED") || message.includes("ENOTFOUND") || message.includes("fetch failed")) {
 				throw new Error(
 					`Connection failed to ${this.addr}: ${message}. Check that Vault is running and accessible.`,
 				);
@@ -226,8 +224,9 @@ export class HashiCorpVaultProvider extends BaseSecretProvider implements Browsa
 	}
 
 	/**
-	 * Browse available secrets
-	 * @param path - Optional path: empty 	 */
+	 * List secrets at a given path
+	 * @param path - Path to list secrets at (empty string for root)
+	 */
 	private async listSecrets(path: string): Promise<SecretBrowserNode[]> {
 		try {
 			// List endpoint for KV v2 - use GET with list=true query param
@@ -246,12 +245,6 @@ export class HashiCorpVaultProvider extends BaseSecretProvider implements Browsa
 					throw new Error("Permission denied: Token does not have list access");
 				}
 				throw new Error(`Failed to list secrets: ${response.status} ${response.statusText}`);
-			}
-
-			const result = (await response.json()) as VaultListResponse;
-			const keys = result.data?.keys || [];
-
-			const nodes: SecretBrowserNode[] = []; to list secrets: ${response.status} ${response.statusText}`);
 			}
 
 			const result = (await response.json()) as VaultListResponse;
@@ -322,6 +315,24 @@ export class HashiCorpVaultProvider extends BaseSecretProvider implements Browsa
 			this.logError(`Failed to list secret keys at path "${path}"`, error);
 			throw error;
 		}
+	}
+
+	/**
+	 * Browse available secrets at a given path
+	 * @param path - Optional path to browse (e.g., "apps/myapp")
+	 * @returns Array of browsable nodes
+	 */
+	async browse(path?: string): Promise<SecretBrowserNode[]> {
+		const normalizedPath = path || "";
+		this.log(`Browsing secrets at path: "${normalizedPath || '(root)'}"`);
+
+		// Check if path contains a colon - if so, it's a specific secret and we should list its keys
+		if (normalizedPath.includes(":")) {
+			// Already a specific key, nothing to browse
+			return [];
+		}
+
+		return this.listSecrets(normalizedPath);
 	}
 
 	/**
