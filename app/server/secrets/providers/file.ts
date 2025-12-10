@@ -42,7 +42,14 @@ export class FileSecretProvider extends BaseSecretProvider implements BrowsableS
 		const secretName = ref.slice(prefix.length);
 		// Remove any leading slashes to normalize
 		const normalizedName = secretName.replace(/^\/+/, "");
-		return path.join(SECRETS_DIRECTORY, normalizedName);
+		const resolvedPath = path.resolve(SECRETS_DIRECTORY, normalizedName);
+
+		// Ensure the resolved path is within the secrets directory (prevent path traversal)
+		if (!resolvedPath.startsWith(SECRETS_DIRECTORY + path.sep) && resolvedPath !== SECRETS_DIRECTORY) {
+			throw new Error(`Invalid secret reference: path escapes secrets directory`);
+		}
+
+		return resolvedPath;
 	}
 
 	async get(ref: string): Promise<string> {

@@ -102,7 +102,9 @@ function ProviderField({
 				</div>
 			);
 
-		case "switch":
+		case "switch": {
+			const switchValue = form.watch(fieldName);
+			const checkedValue = typeof switchValue === "boolean" ? switchValue : (field.defaultValue !== false);
 			return (
 				<div className="flex items-center justify-between">
 					<div className="space-y-0.5">
@@ -111,11 +113,12 @@ function ProviderField({
 					</div>
 					<Switch
 						id={fieldName}
-						checked={(form.watch(fieldName) as boolean) ?? true}
+						checked={checkedValue}
 						onCheckedChange={(checked) => form.setValue(fieldName, checked, { shouldDirty: true })}
 					/>
 				</div>
 			);
+		}
 
 		default:
 			return null;
@@ -132,13 +135,8 @@ export function CreateSecretProviderForm({
 	defaultValues,
 }: CreateSecretProviderFormProps) {
 	const providerTypes = Object.keys(SECRET_PROVIDER_METADATA) as SecretProviderType[];
+	const defaultType = providerTypes[0] ?? ("op-connect" as SecretProviderType);
 
-	// Guard against empty provider metadata (developer error)
-	if (providerTypes.length === 0) {
-		return <div className="text-muted-foreground">No secret providers available.</div>;
-	}
-
-	const defaultType = providerTypes[0];
 	const form = useForm<SecretProviderFormValues>({
 		defaultValues: {
 			name: "",
@@ -153,6 +151,11 @@ export function CreateSecretProviderForm({
 	const isDirty = form.formState.isDirty;
 	const providerType = form.watch("type");
 	const providerMeta = SECRET_PROVIDER_METADATA[providerType];
+
+	// Guard against empty provider metadata (developer error) - after hooks
+	if (providerTypes.length === 0 || !providerMeta) {
+		return <div className="text-muted-foreground">No secret providers available.</div>;
+	}
 
 	useEffect(() => {
 		onDirtyChange?.(isDirty);

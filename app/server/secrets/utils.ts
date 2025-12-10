@@ -19,7 +19,8 @@ const URI_PATTERN = /^([a-z][a-z-]*):\/\//;
  * @param value - The value to check
  * @returns true if the value is an encrypted DB secret
  */
-export function isEncryptedSecret(value: string): boolean {
+export function isEncryptedSecret(value: string | undefined | null): boolean {
+	if (!value || typeof value !== "string") return false;
 	return value.startsWith(`${ENCRYPTED_SECRET_PREFIX}:`);
 }
 

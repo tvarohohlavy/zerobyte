@@ -63,7 +63,10 @@ export default function CreateSecretProvider() {
 
 	const handleTestConnection = (values: SecretProviderFormValues) => {
 		const providerMeta = SECRET_PROVIDER_METADATA[values.type as SecretProviderType];
-		if (!providerMeta) return;
+		if (!providerMeta) {
+			toast.error("Unknown provider type selected");
+			return;
+		}
 		testConfig.mutate({
 			body: {
 				config: providerMeta.buildConfig(values),
@@ -73,7 +76,10 @@ export default function CreateSecretProvider() {
 
 	const handleSubmit = (values: SecretProviderFormValues) => {
 		const providerMeta = SECRET_PROVIDER_METADATA[values.type as SecretProviderType];
-		if (!providerMeta) return;
+		if (!providerMeta) {
+			toast.error("Unknown provider type selected");
+			return;
+		}
 		createProvider.mutate({
 			body: {
 				name: values.name,

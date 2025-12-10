@@ -116,6 +116,12 @@ export class SecretResolver {
 					scheme: scheme,
 				};
 			}
+
+			// No provider available for this scheme - throw consistent with resolve()
+			throw new Error(
+				`No provider available for secret reference: ${maskSecretRef(value)}. ` +
+					`Scheme "${scheme}" is not configured.`,
+			);
 		}
 
 		return { value, source: "plaintext" };

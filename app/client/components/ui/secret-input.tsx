@@ -122,9 +122,9 @@ function SecretInput({
 						<span className="sr-only">{showPassword ? "Hide" : "Show"} password</span>
 					</Button>
 				)}
-			</div>
+				</div>
 
-			{/* Browse button */}
+				{/* Browse button */}
 				{browsable && (
 					<Tooltip>
 						<TooltipTrigger asChild>

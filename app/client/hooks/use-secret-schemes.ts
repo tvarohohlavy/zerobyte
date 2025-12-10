@@ -12,7 +12,7 @@ type SecretProvider = {
  * Returns built-in schemes + dynamically registered provider schemes
  */
 export function useSecretSchemes() {
-	const { data } = useQuery({
+	const { data, isPending } = useQuery({
 		queryKey: ["secret-providers-schemes"],
 		queryFn: async () => {
 			const result = await getApiV1SecretProviders();
@@ -38,6 +38,6 @@ export function useSecretSchemes() {
 		schemes: allSchemes,
 		builtinSchemes: BUILTIN_SECRET_SCHEMES,
 		dynamicSchemes,
-		isLoading: !data,
+		isLoading: isPending,
 	};
 }

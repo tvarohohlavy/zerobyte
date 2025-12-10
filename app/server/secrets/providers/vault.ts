@@ -164,10 +164,8 @@ export class HashiCorpVaultProvider extends BaseSecretProvider implements Browsa
 
 	async healthCheck(): Promise<boolean> {
 		try {
-			// Check Vault health endpoint (doesn't require authentication)
-			const healthResponse = await this.fetchWithOptions(`${this.addr}/v1/sys/health`, {
-				headers: {}, // No auth needed for health check
-			});
+			// Health check doesn't require auth, but we include it anyway (Vault accepts extra headers)
+			const healthResponse = await this.fetchWithOptions(`${this.addr}/v1/sys/health`);
 
 			// Vault returns different status codes based on state:
 			// 200 = initialized, unsealed, active

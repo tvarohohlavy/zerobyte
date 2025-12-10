@@ -95,11 +95,14 @@ export default function SecretProviders({ loaderData }: SecretProvidersProps) {
 					{BUILTIN_PROVIDER_METADATA.map((provider) => {
 						const Icon = BUILTIN_PROVIDER_ICONS[provider.id] ?? Lock;
 						return (
-							<Card
-								key={provider.id}
-								className={`p-4 ${provider.browsable ? "cursor-pointer hover:border-primary/50 transition-colors" : ""}`}
-								onClick={provider.browsable ? () => setBrowseProvider(provider) : undefined}
-							>
+								<Card
+									key={provider.id}
+									className={`p-4 ${provider.browsable ? "cursor-pointer hover:border-primary/50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2" : ""}`}
+									onClick={provider.browsable ? () => setBrowseProvider(provider) : undefined}
+									onKeyDown={provider.browsable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setBrowseProvider(provider); } } : undefined}
+									role={provider.browsable ? "button" : undefined}
+									tabIndex={provider.browsable ? 0 : undefined}
+								>
 								<div className="flex items-start gap-3">
 									<div className="rounded-md bg-muted p-2">
 										<Icon className="h-5 w-5 text-muted-foreground" />

@@ -556,7 +556,7 @@ const browseProvider = async (id: string, path?: string): Promise<SecretBrowserN
 	}
 
 	if (!dbProvider.enabled) {
-		throw new InternalServerError("Provider is disabled");
+		throw new BadRequestError("Provider is disabled");
 	}
 
 	// Get the provider instance from the resolver by its scheme

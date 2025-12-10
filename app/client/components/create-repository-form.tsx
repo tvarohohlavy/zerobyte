@@ -762,7 +762,11 @@ export const CreateRepositoryForm = ({
 									<FormControl>
 										<SecretTextarea
 											{...field}
-											placeholder="-----BEGIN OPENSSH PRIVATE KEY-----&#10;...&#10;-----END OPENSSH PRIVATE KEY-----&#10;&#10;Or use a secret URI (e.g., op://vault/item/private_key)"
+											placeholder={`-----BEGIN OPENSSH PRIVATE KEY-----
+...
+-----END OPENSSH PRIVATE KEY-----
+
+Or use a secret URI (e.g., op://vault/item/private_key)`}
 											className="min-h-32 font-mono text-xs"
 										/>
 									</FormControl>
