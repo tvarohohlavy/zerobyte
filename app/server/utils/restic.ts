@@ -40,7 +40,7 @@ const snapshotInfoSchema = type({
 	short_id: "string",
 	time: "string",
 	uid: "number?",
-	username: "string",
+	username: "string?",
 	tags: "string[]?",
 	summary: type({
 		backup_end: "string",
