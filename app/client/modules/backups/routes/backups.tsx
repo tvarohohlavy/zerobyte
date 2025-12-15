@@ -19,7 +19,7 @@ import { Button } from "~/client/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/client/components/ui/card";
 import type { Route } from "./+types/backups";
 import { listBackupSchedules } from "~/client/api-client";
-import { listBackupSchedulesOptions } from "~/client/api-client/@tanstack/react-query.gen";
+import { listBackupSchedulesOptions, listBackupSchedulesQueryKey } from "~/client/api-client/@tanstack/react-query.gen";
 
 // Temporary helper until API client is regenerated
 async function reorderBackupSchedules(scheduleIds: number[]) {
@@ -88,7 +88,11 @@ export default function Backups({ loaderData }: Route.ComponentProps) {
 			await reorderBackupSchedules(scheduleIds);
 		},
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["listBackupSchedules"] });
+			queryClient.invalidateQueries({ queryKey: listBackupSchedulesQueryKey() });
+		},
+		onError: () => {
+			// Revert the order or display error to user
+			queryClient.invalidateQueries({ queryKey: listBackupSchedulesQueryKey() });
 		},
 	});
 
