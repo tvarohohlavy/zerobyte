@@ -148,6 +148,25 @@ Repositories are optimized for storage efficiency and data integrity, leveraging
 
 To create a repository, navigate to the "Repositories" section in the web interface and click on "Create repository". Fill in the required details such as repository name, type, and connection settings.
 
+## Secret references (env:// and file://)
+
+Any field that is normally stored encrypted in Zerobyte (passwords, tokens, access keys, etc.) also accepts secret references.
+
+- `env://VAR_NAME` reads the value from `process.env.VAR_NAME` inside the Zerobyte container.
+- `file://secret_name` reads the value from `/run/secrets/secret_name` (Docker secrets).
+
+If you enter a normal value (not starting with `env://` or `file://`), Zerobyte will encrypt it before storing it in the database (values will look like `encv1:...`).
+
+Examples:
+
+```yaml
+# SMB volume password from an env var
+password: env://SMB_PASSWORD
+
+# S3 secret access key from a Docker secret
+secretAccessKey: file://s3-secret-access-key
+```
+
 ### Using rclone for cloud storage
 
 Zerobyte can use [rclone](https://rclone.org/) to support 40+ cloud storage providers including Google Drive, Dropbox, OneDrive, Box, pCloud, Mega, and many more. This gives you the flexibility to store your backups on virtually any cloud storage service.
