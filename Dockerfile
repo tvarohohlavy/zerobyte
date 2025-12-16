@@ -1,8 +1,8 @@
-ARG BUN_VERSION="1.3.1"
+ARG BUN_VERSION="1.3.3"
 
 FROM oven/bun:${BUN_VERSION}-alpine AS base
 
-RUN apk add --no-cache davfs2=1.6.1-r2 openssh-client
+RUN apk add --no-cache davfs2=1.6.1-r2 openssh-client fuse3
 
 
 # ------------------------------
@@ -14,7 +14,7 @@ WORKDIR /deps
 
 ARG TARGETARCH
 ARG RESTIC_VERSION="0.18.1"
-ARG SHOUTRRR_VERSION="0.12.0"
+ARG SHOUTRRR_VERSION="0.12.1"
 ENV TARGETARCH=${TARGETARCH}
 
 RUN apk add --no-cache curl bzip2 unzip tar

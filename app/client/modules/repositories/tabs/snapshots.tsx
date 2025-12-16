@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { Database } from "lucide-react";
+import { Database, X } from "lucide-react";
 import { useState } from "react";
-import { listSnapshotsOptions } from "~/client/api-client/@tanstack/react-query.gen";
+import { listBackupSchedulesOptions, listSnapshotsOptions } from "~/client/api-client/@tanstack/react-query.gen";
 import { SnapshotsTable } from "~/client/components/snapshots-table";
 import { Button } from "~/client/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/client/components/ui/card";
@@ -18,9 +18,11 @@ export const RepositorySnapshotsTabContent = ({ repository }: Props) => {
 
 	const { data, isFetching, failureReason } = useQuery({
 		...listSnapshotsOptions({ path: { name: repository.name } }),
-		refetchInterval: 10000,
-		refetchOnWindowFocus: true,
 		initialData: [],
+	});
+
+	const schedules = useQuery({
+		...listBackupSchedulesOptions(),
 	});
 
 	const filteredSnapshots = data.filter((snapshot: Snapshot) => {
@@ -126,6 +128,7 @@ export const RepositorySnapshotsTabContent = ({ repository }: Props) => {
 								<div className="flex flex-col items-center gap-3">
 									<p className="text-muted-foreground">No snapshots match your search.</p>
 									<Button onClick={() => setSearchQuery("")} variant="outline" size="sm">
+										<X className="h-4 w-4 mr-2" />
 										Clear search
 									</Button>
 								</div>
@@ -134,7 +137,7 @@ export const RepositorySnapshotsTabContent = ({ repository }: Props) => {
 					</TableBody>
 				</Table>
 			) : (
-				<SnapshotsTable snapshots={filteredSnapshots} repositoryName={repository.name} />
+				<SnapshotsTable snapshots={filteredSnapshots} repositoryName={repository.name} backups={schedules.data ?? []} />
 			)}
 			<div className="px-4 py-2 text-sm text-muted-foreground bg-card-header flex justify-between border-t">
 				<span>

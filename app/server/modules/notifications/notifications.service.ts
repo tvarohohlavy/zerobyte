@@ -38,7 +38,7 @@ async function encryptSensitiveFields(config: NotificationConfig): Promise<Notif
 		case "email":
 			return {
 				...config,
-				password: await cryptoUtils.encrypt(config.password),
+				password: config.password ? await cryptoUtils.encrypt(config.password) : undefined,
 			};
 		case "slack":
 			return {
@@ -85,7 +85,7 @@ async function decryptSensitiveFields(config: NotificationConfig): Promise<Notif
 		case "email":
 			return {
 				...config,
-				password: await cryptoUtils.decrypt(config.password),
+				password: config.password ? await cryptoUtils.decrypt(config.password) : undefined,
 			};
 		case "slack":
 			return {
@@ -253,6 +253,7 @@ const updateScheduleNotifications = async (
 		destinationId: number;
 		notifyOnStart: boolean;
 		notifyOnSuccess: boolean;
+		notifyOnWarning: boolean;
 		notifyOnFailure: boolean;
 	}>,
 ) => {
@@ -300,8 +301,9 @@ const sendBackupNotification = async (
 					return assignment.notifyOnStart;
 				case "success":
 					return assignment.notifyOnSuccess;
-				case "failure":
 				case "warning":
+					return assignment.notifyOnWarning;
+				case "failure":
 					return assignment.notifyOnFailure;
 				default:
 					return false;

@@ -10,7 +10,8 @@ const isEncrypted = (val?: string): boolean => {
 };
 
 /**
- * Given a string, encrypts it using a randomly generated salt
+ * Given a string, encrypts it using a randomly generated salt.
+ * Returns the input unchanged if it's empty or already encrypted.
  */
 const encrypt = async (data: string) => {
 	if (!data) {
@@ -21,7 +22,7 @@ const encrypt = async (data: string) => {
 		return data;
 	}
 
-	const secret = (await Bun.file(RESTIC_PASS_FILE).text()).trim();
+	const secret = await Bun.file(RESTIC_PASS_FILE).text();
 
 	const salt = crypto.randomBytes(16);
 	const key = crypto.pbkdf2Sync(secret, salt, 100000, keyLength, "sha256");
@@ -35,14 +36,15 @@ const encrypt = async (data: string) => {
 };
 
 /**
- * Given an encrypted string, decrypts it using the salt stored in the string
+ * Given an encrypted string, decrypts it using the salt stored in the string.
+ * Returns the input unchanged if it's not encrypted (for backward compatibility).
  */
 const decrypt = async (encryptedData: string) => {
 	if (!isEncrypted(encryptedData)) {
 		return encryptedData;
 	}
 
-	const secret = await Bun.file(RESTIC_PASS_FILE).text();
+	const secret = (await Bun.file(RESTIC_PASS_FILE).text()).trim();
 
 	const parts = encryptedData.split(":").slice(1); // Remove prefix
 	const saltHex = parts.shift() as string;
