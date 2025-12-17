@@ -58,21 +58,19 @@ const app = new Hono()
 		}),
 	)
 	.get("healthcheck", (c) => c.json({ status: "ok" }))
-	.route(
-		"/api/v1/auth",
-		authController.use(
-			rateLimit({
-				windowMs: 15 * 60 * 1000, // 15 minutes
-				limit: 5, // stricter limit for auth endpoints to prevent brute force
-			}),
-		).basePath("/api/v1"),
-	)
-	.route("/api/v1/volumes", volumeController.use(requireAuth))
-	.route("/api/v1/repositories", repositoriesController.use(requireAuth))
-	.route("/api/v1/backups", backupScheduleController.use(requireAuth))
-	.route("/api/v1/notifications", notificationsController.use(requireAuth))
-	.route("/api/v1/system", systemController.use(requireAuth))
-	.route("/api/v1/events", eventsController.use(requireAuth));
+	.route("/api/v1/auth", authController.basePath("/api/v1"))
+	.use("/api/v1/volumes/*", requireAuth)
+	.use("/api/v1/repositories/*", requireAuth)
+	.use("/api/v1/backups/*", requireAuth)
+	.use("/api/v1/notifications/*", requireAuth)
+	.use("/api/v1/system/*", requireAuth)
+	.use("/api/v1/events/*", requireAuth)
+	.route("/api/v1/volumes", volumeController)
+	.route("/api/v1/repositories", repositoriesController)
+	.route("/api/v1/backups", backupScheduleController)
+	.route("/api/v1/notifications", notificationsController)
+	.route("/api/v1/system", systemController)
+	.route("/api/v1/events", eventsController);
 
 // API documentation endpoints require authentication
 app.get("/api/v1/openapi.json", requireAuth, generalDescriptor(app));
