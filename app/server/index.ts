@@ -2,6 +2,9 @@ import { createHonoServer } from "react-router-hono-server/bun";
 import { Scalar } from "@scalar/hono-api-reference";
 import { Hono } from "hono";
 import { logger as honoLogger } from "hono/logger";
+import { secureHeaders } from "hono/secure-headers";
+import { cors } from "hono/cors";
+import { rateLimit } from "hono-rate-limiter";
 import { openAPIRouteHandler } from "hono-openapi";
 import { runDbMigrations } from "./db/db";
 import { authController } from "./modules/auth/auth.controller";
@@ -41,8 +44,29 @@ export const scalarDescriptor = Scalar({
 
 const app = new Hono()
 	.use(honoLogger())
+	.use(secureHeaders())
+	.use(
+		cors({
+			origin: [config.APP_URL || "http://localhost:3000"],
+			credentials: true,
+		}),
+	)
+	.use(
+		rateLimit({
+			windowMs: 15 * 60 * 1000, // 15 minutes
+			limit: 100, // limit each IP to 100 requests per windowMs
+		}),
+	)
 	.get("healthcheck", (c) => c.json({ status: "ok" }))
-	.route("/api/v1/auth", authController.basePath("/api/v1"))
+	.route(
+		"/api/v1/auth",
+		authController.use(
+			rateLimit({
+				windowMs: 15 * 60 * 1000, // 15 minutes
+				limit: 5, // stricter limit for auth endpoints to prevent brute force
+			}),
+		).basePath("/api/v1"),
+	)
 	.route("/api/v1/volumes", volumeController.use(requireAuth))
 	.route("/api/v1/repositories", repositoriesController.use(requireAuth))
 	.route("/api/v1/backups", backupScheduleController.use(requireAuth))
@@ -50,8 +74,9 @@ const app = new Hono()
 	.route("/api/v1/system", systemController.use(requireAuth))
 	.route("/api/v1/events", eventsController.use(requireAuth));
 
-app.get("/api/v1/openapi.json", generalDescriptor(app));
-app.get("/api/v1/docs", scalarDescriptor);
+// API documentation endpoints require authentication
+app.get("/api/v1/openapi.json", requireAuth, generalDescriptor(app));
+app.get("/api/v1/docs", requireAuth, scalarDescriptor);
 
 app.onError((err, c) => {
 	logger.error(`${c.req.url}: ${err.message}`);
