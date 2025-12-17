@@ -236,7 +236,7 @@ To export, click the "Export" button in Settings. A dialog will appear with opti
   - **Keep encrypted** - Export secrets in encrypted form (requires the same recovery key to decrypt on import)
   - **Decrypt** - Export secrets as plaintext (use with caution)
 - **Include recovery key** - Include the master encryption key for all repositories
-- **Include password hash** - Include the hashed user passwords for seamless migration
+- **Include password hash** - Include the hashed user passwords (enables future import workflows)
 
 Export requires password verification for security. You must enter your password to confirm your identity before any configuration can be exported.
 
