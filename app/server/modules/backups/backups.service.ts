@@ -425,15 +425,6 @@ const stopBackup = async (scheduleId: number) => {
 		throw new NotFoundError("Backup schedule not found");
 	}
 
-	await db
-		.update(backupSchedulesTable)
-		.set({
-			lastBackupStatus: "error",
-			lastBackupError: "Backup was stopped by user",
-			updatedAt: Date.now(),
-		})
-		.where(eq(backupSchedulesTable.id, scheduleId));
-
 	const abortController = runningBackups.get(scheduleId);
 	if (!abortController) {
 		throw new ConflictError("No backup is currently running for this schedule");
@@ -442,6 +433,15 @@ const stopBackup = async (scheduleId: number) => {
 	logger.info(`Stopping backup for schedule ${scheduleId}`);
 
 	abortController.abort();
+
+	await db
+		.update(backupSchedulesTable)
+		.set({
+			lastBackupStatus: "warning",
+			lastBackupError: "Backup was stopped by user",
+			updatedAt: Date.now(),
+		})
+		.where(eq(backupSchedulesTable.id, scheduleId));
 };
 
 const runForget = async (scheduleId: number, repositoryId?: string) => {

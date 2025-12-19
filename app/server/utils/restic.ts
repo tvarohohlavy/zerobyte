@@ -345,6 +345,11 @@ const backup = async (
 		logger.error(`Restic backup failed: ${res.stderr.toString()}`);
 		logger.error(`Command executed: restic ${args.join(" ")}`);
 
+		if (options?.signal?.aborted) {
+			logger.error("Restic backup was aborted by signal.");
+			throw new ResticError(999, "Backup operation stopped by user.");
+		}
+
 		throw new ResticError(res.exitCode, res.stderr.toString());
 	}
 
