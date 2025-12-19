@@ -155,6 +155,15 @@ export const buildEnv = async (config: RepositoryConfig) => {
 			if (config.password) {
 				env.RESTIC_REST_PASSWORD = await cryptoUtils.resolveSecret(config.password);
 			}
+			if (config.cacert) {
+				const decryptedCert = await cryptoUtils.resolveSecret(config.cacert);
+				const certPath = path.join("/tmp", `rest-server-cacert-${crypto.randomBytes(8).toString("hex")}.pem`);
+				await fs.writeFile(certPath, decryptedCert, { mode: 0o600 });
+				env.RESTIC_CACERT = certPath;
+			}
+			if (config.insecureTls) {
+				env._REST_INSECURE_TLS = "true";
+			}
 			break;
 		}
 		case "sftp": {
@@ -876,6 +885,10 @@ export const cleanupTemporaryKeys = async (config: RepositoryConfig, env: Record
 	} else if (config.backend === "gcs" && env.GOOGLE_APPLICATION_CREDENTIALS) {
 		await fs.unlink(env.GOOGLE_APPLICATION_CREDENTIALS).catch(() => {});
 	}
+
+	if (config.backend === "rest" && env.RESTIC_CACERT) {
+		await fs.unlink(env.RESTIC_CACERT).catch(() => {});
+	}
 };
 
 export const addCommonArgs = (args: string[], env: Record<string, string>) => {
@@ -883,6 +896,10 @@ export const addCommonArgs = (args: string[], env: Record<string, string>) => {
 
 	if (env._SFTP_SSH_ARGS) {
 		args.push("-o", `sftp.args=${env._SFTP_SSH_ARGS}`);
+	}
+
+	if (env._REST_INSECURE_TLS === "true") {
+		args.push("--insecure-tls");
 	}
 };
 
