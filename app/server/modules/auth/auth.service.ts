@@ -22,7 +22,10 @@ export class AuthService {
 			timeCost: 2,
 		});
 
-		const [user] = await db.insert(usersTable).values({ username, passwordHash }).returning();
+		const [user] = await db
+			.insert(usersTable)
+			.values({ username, passwordHash, role: "admin" })
+			.returning();
 
 		if (!user) {
 			throw new Error("User registration failed");
@@ -42,6 +45,7 @@ export class AuthService {
 			user: {
 				id: user.id,
 				username: user.username,
+				role: user.role,
 				createdAt: user.createdAt,
 				hasDownloadedResticPassword: user.hasDownloadedResticPassword,
 			},
@@ -81,6 +85,7 @@ export class AuthService {
 			user: {
 				id: user.id,
 				username: user.username,
+				role: user.role,
 				hasDownloadedResticPassword: user.hasDownloadedResticPassword,
 			},
 			expiresAt,
@@ -121,6 +126,7 @@ export class AuthService {
 			user: {
 				id: session.user.id,
 				username: session.user.username,
+				role: session.user.role,
 				hasDownloadedResticPassword: session.user.hasDownloadedResticPassword,
 			},
 			session: {

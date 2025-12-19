@@ -1,5 +1,6 @@
 import { type } from "arktype";
 import { describeRoute, resolver } from "hono-openapi";
+import { USER_ROLE_UNION } from "~/schemas/auth";
 
 // Validation schemas
 export const loginBodySchema = type({
@@ -18,6 +19,7 @@ const loginResponseSchema = type({
 	user: type({
 		id: "number",
 		username: "string",
+		role: USER_ROLE_UNION,
 		hasDownloadedResticPassword: "boolean",
 	}).optional(),
 });

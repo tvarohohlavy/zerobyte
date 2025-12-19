@@ -1,6 +1,7 @@
 import { deleteCookie, getCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import { authService } from "./auth.service";
+import type { UserRole } from "~/schemas/auth";
 
 const COOKIE_NAME = "session_id";
 const COOKIE_OPTIONS = {
@@ -15,6 +16,7 @@ declare module "hono" {
 		user: {
 			id: number;
 			username: string;
+			role: UserRole;
 			hasDownloadedResticPassword: boolean;
 		};
 	}

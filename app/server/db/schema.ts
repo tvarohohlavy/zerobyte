@@ -1,6 +1,7 @@
 import { relations, sql } from "drizzle-orm";
 import { int, integer, sqliteTable, text, primaryKey, unique } from "drizzle-orm/sqlite-core";
 import type { CompressionMode, RepositoryBackend, repositoryConfigSchema, RepositoryStatus } from "~/schemas/restic";
+import type { UserRole } from "~/schemas/auth";
 import type { BackendStatus, BackendType, volumeConfigSchema } from "~/schemas/volumes";
 import type { NotificationType, notificationConfigSchema } from "~/schemas/notifications";
 
@@ -28,6 +29,7 @@ export type Volume = typeof volumesTable.$inferSelect;
 export const usersTable = sqliteTable("users_table", {
 	id: int().primaryKey({ autoIncrement: true }),
 	username: text().notNull().unique(),
+	role: text().$type<UserRole>().notNull().default("admin"),
 	passwordHash: text("password_hash").notNull(),
 	hasDownloadedResticPassword: int("has_downloaded_restic_password", { mode: "boolean" }).notNull().default(false),
 	createdAt: int("created_at", { mode: "number" }).notNull().default(sql`(unixepoch() * 1000)`),

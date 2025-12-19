@@ -59,6 +59,7 @@ export const authController = new Hono()
 					user: {
 						id: user.id,
 						username: user.username,
+						role: user.role,
 						hasDownloadedResticPassword: user.hasDownloadedResticPassword,
 					},
 				},
@@ -85,6 +86,7 @@ export const authController = new Hono()
 				user: {
 					id: user.id,
 					username: user.username,
+					role: user.role,
 					hasDownloadedResticPassword: user.hasDownloadedResticPassword,
 				},
 			});
@@ -118,7 +120,12 @@ export const authController = new Hono()
 
 		return c.json<GetMeDto>({
 			success: true,
-			user: session.user,
+			user: {
+				id: session.user.id,
+				username: session.user.username,
+				role: session.user.role,
+				hasDownloadedResticPassword: session.user.hasDownloadedResticPassword,
+			},
 			message: "Authenticated",
 		});
 	})
