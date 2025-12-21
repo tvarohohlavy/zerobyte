@@ -13,18 +13,13 @@ services:
     environment:
       - NODE_ENV=development
       - ZEROBYTE_CONFIG_IMPORT=true
-      # - SMB_PASSWORD=secret
     ports:
       - "4096:4096"
-    # secrets:
-    #   - smb-password
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /var/lib/zerobyte:/var/lib/zerobyte
-
       - ./mydata:/mydata:ro
       - ./zerobyte.config.json:/app/zerobyte.config.json:ro
-
       - ./app:/app/app
       - ~/.config/rclone:/root/.config/rclone
 
@@ -71,7 +66,3 @@ services:
       - ./zerobyte.config.json:/app/zerobyte.config.json:ro
       - ./mydata:/mydata:ro
       - ~/.config/rclone:/root/.config/rclone
-
-# secrets:
-#   smb-password:
-#     file: ./smb-password.txt

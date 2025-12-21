@@ -1,4 +1,4 @@
-import { and, asc, eq, ne } from "drizzle-orm";
+import { and, asc, eq, isNull, ne, or } from "drizzle-orm";
 import cron from "node-cron";
 import { CronExpressionParser } from "cron-parser";
 import { NotFoundError, BadRequestError, ConflictError } from "http-errors-enhanced";
@@ -13,6 +13,7 @@ import { serverEvents } from "../../core/events";
 import { notificationsService } from "../notifications/notifications.service";
 import { repoMutex } from "../../core/repository-mutex";
 import { checkMirrorCompatibility, getIncompatibleMirrorError } from "~/server/utils/backend-compatibility";
+import path from "node:path";
 
 const runningBackups = new Map<number, AbortController>();
 
@@ -30,6 +31,27 @@ const calculateNextRun = (cronExpression: string): number => {
 		fallback.setMinutes(fallback.getMinutes() + 1);
 		return fallback.getTime();
 	}
+};
+
+const processPattern = (pattern: string, volumePath: string): string => {
+	let isNegated = false;
+	let p = pattern;
+
+	if (p.startsWith("!")) {
+		isNegated = true;
+		p = p.slice(1);
+	}
+
+	if (p.startsWith(volumePath)) {
+		return pattern;
+	}
+
+	if (p.startsWith("/")) {
+		const processed = path.join(volumePath, p.slice(1));
+		return isNegated ? `!${processed}` : processed;
+	}
+
+	return pattern;
 };
 
 const listSchedules = async () => {
@@ -258,7 +280,7 @@ const executeBackup = async (scheduleId: number, manual = false) => {
 		};
 
 		if (schedule.excludePatterns && schedule.excludePatterns.length > 0) {
-			backupOptions.exclude = schedule.excludePatterns;
+			backupOptions.exclude = schedule.excludePatterns.map((p) => processPattern(p, volumePath));
 		}
 
 		if (schedule.excludeIfPresent && schedule.excludeIfPresent.length > 0) {
@@ -266,7 +288,7 @@ const executeBackup = async (scheduleId: number, manual = false) => {
 		}
 
 		if (schedule.includePatterns && schedule.includePatterns.length > 0) {
-			backupOptions.include = schedule.includePatterns;
+			backupOptions.include = schedule.includePatterns.map((p) => processPattern(p, volumePath));
 		}
 
 		const releaseBackupLock = await repoMutex.acquireShared(repository.id, `backup:${volume.name}`);
@@ -363,8 +385,6 @@ const executeBackup = async (scheduleId: number, manual = false) => {
 			.catch((notifError) => {
 				logger.error(`Failed to send backup failure notification: ${toMessage(notifError)}`);
 			});
-
-		throw error;
 	} finally {
 		runningBackups.delete(scheduleId);
 	}
@@ -373,7 +393,10 @@ const executeBackup = async (scheduleId: number, manual = false) => {
 const getSchedulesToExecute = async () => {
 	const now = Date.now();
 	const schedules = await db.query.backupSchedulesTable.findMany({
-		where: and(eq(backupSchedulesTable.enabled, true), ne(backupSchedulesTable.lastBackupStatus, "in_progress")),
+		where: and(
+			eq(backupSchedulesTable.enabled, true),
+			or(ne(backupSchedulesTable.lastBackupStatus, "in_progress"), isNull(backupSchedulesTable.lastBackupStatus)),
+		),
 	});
 
 	const schedulesToRun: number[] = [];
@@ -405,15 +428,6 @@ const stopBackup = async (scheduleId: number) => {
 		throw new NotFoundError("Backup schedule not found");
 	}
 
-	await db
-		.update(backupSchedulesTable)
-		.set({
-			lastBackupStatus: "error",
-			lastBackupError: "Backup was stopped by user",
-			updatedAt: Date.now(),
-		})
-		.where(eq(backupSchedulesTable.id, scheduleId));
-
 	const abortController = runningBackups.get(scheduleId);
 	if (!abortController) {
 		throw new ConflictError("No backup is currently running for this schedule");
@@ -422,6 +436,15 @@ const stopBackup = async (scheduleId: number) => {
 	logger.info(`Stopping backup for schedule ${scheduleId}`);
 
 	abortController.abort();
+
+	await db
+		.update(backupSchedulesTable)
+		.set({
+			lastBackupStatus: "warning",
+			lastBackupError: "Backup was stopped by user",
+			updatedAt: Date.now(),
+		})
+		.where(eq(backupSchedulesTable.id, scheduleId));
 };
 
 const runForget = async (scheduleId: number, repositoryId?: string) => {

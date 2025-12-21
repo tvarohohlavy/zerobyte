@@ -1,0 +1,51 @@
+services:
+  tailscale:
+    image: tailscale/tailscale:stable
+    container_name: zerobyte-tailscale
+    hostname: ${TS_HOSTNAME:-zerobyte}
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      # Optional: Some hosts require this for kernel-mode Tailscale.
+      # If it causes issues (common on Docker Desktop), keep it commented out (disabled as shown here).
+      # - SYS_MODULE
+    # Kernel-mode Tailscale (TS_USERSPACE=false) requires /dev/net/tun.
+    # If you switch to userspace mode (TS_USERSPACE=true), you MUST remove this
+    # devices section (or at least this mapping), otherwise the container may
+    # fail to start or hit runtime errors on some hosts.
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      # Kernel-mode (false) vs userspace-mode (true).
+      - TS_USERSPACE=${TS_USERSPACE:-false}
+      # Optional flags passed to `tailscale up`.
+      # Examples:
+      # - --advertise-tags=tag:zerobyte
+      # - --accept-dns=true --accept-routes
+      - TS_EXTRA_ARGS=${TS_EXTRA_ARGS:-}
+    volumes:
+      - /var/lib/tailscale:/var/lib/tailscale
+    # If you only want access over Tailscale (not from the local network), remove this.
+    ports:
+      - "4096:4096"
+
+  zerobyte:
+    image: ghcr.io/nicotsx/zerobyte:latest
+    container_name: zerobyte
+    restart: unless-stopped
+    # Uncomment if you need to mount NFS/SMB/WebDAV volumes:
+    # cap_add:
+    #   - SYS_ADMIN
+    # devices:
+    #   - /dev/fuse:/dev/fuse
+    # Share the Tailscale network namespace (sidecar pattern)
+    network_mode: service:tailscale
+    depends_on:
+      - tailscale
+    environment:
+      - TZ=${TZ:-UTC}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/lib/zerobyte:/var/lib/zerobyte
