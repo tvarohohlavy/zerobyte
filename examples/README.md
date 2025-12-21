@@ -15,6 +15,7 @@ This folder contains runnable, copy/paste-friendly examples for running Zerobyte
 ### Advanced setups
 
 - [Tailscale sidecar](tailscale-sidecar/README.md) — run Zerobyte behind a Tailscale sidecar using shared networking.
+- [Backends test lab](backends-testlab/README.md) — spin up emulators for all volume and repository backends (MinIO, Azurite, SMB, WebDAV, etc.).
 
 ## Conventions
 

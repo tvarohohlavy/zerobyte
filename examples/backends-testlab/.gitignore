@@ -1,0 +1,8 @@
+# Environment file (contains credentials)
+.env
+
+# Generated test data directory
+testdata/
+
+# Docker volumes (if using local driver with bind mounts)
+*.vol/
