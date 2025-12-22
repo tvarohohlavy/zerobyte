@@ -18,6 +18,7 @@ import {
 	type SecretsMode,
 	type FullExportBody,
 } from "./config-export.dto";
+import { requireAuth } from "../auth/auth.middleware";
 
 const COOKIE_NAME = "session_id";
 const COOKIE_OPTIONS = {
@@ -175,11 +176,13 @@ function transformBackupSchedules(
 	});
 }
 
-export const configExportController = new Hono().post(
-	"/export",
-	fullExportDto,
-	validator("json", fullExportBodySchema),
-	async (c) => {
+export const configExportController = new Hono()
+	.use(requireAuth)
+	.post(
+		"/export",
+		fullExportDto,
+		validator("json", fullExportBodySchema),
+		async (c) => {
 		try {
 			const body = c.req.valid("json") as FullExportBody;
 
