@@ -26,9 +26,9 @@ type ExportParams = {
 
 // Keys to exclude when metadata is not included
 const METADATA_KEYS = {
-	ids: ["id", "volumeId", "repositoryId", "scheduleId", "destinationId"],
+	ids: ["id", "shortId", "volumeId", "repositoryId", "scheduleId", "destinationId"],
 	timestamps: ["createdAt", "updatedAt", "lastBackupAt", "nextBackupAt", "lastHealthCheck", "lastChecked", "lastCopyAt"],
-	runtimeState: ["status", "lastError", "lastBackupStatus", "lastBackupError", "hasDownloadedResticPassword", "lastCopyStatus", "lastCopyError"],
+	runtimeState: ["status", "lastError", "lastBackupStatus", "lastBackupError", "hasDownloadedResticPassword", "lastCopyStatus", "lastCopyError", "sortOrder"],
 };
 
 const ALL_METADATA_KEYS = [...METADATA_KEYS.ids, ...METADATA_KEYS.timestamps, ...METADATA_KEYS.runtimeState];
