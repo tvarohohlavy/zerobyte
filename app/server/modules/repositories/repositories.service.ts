@@ -1,7 +1,6 @@
 import crypto from "node:crypto";
-import { and, eq, ne } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { ConflictError, InternalServerError, NotFoundError } from "http-errors-enhanced";
-import slugify from "slugify";
 import { db } from "../../db/db";
 import { repositoriesTable } from "../../db/schema";
 import { toMessage } from "../../utils/errors";
@@ -16,6 +15,12 @@ import {
 	type RepositoryConfig,
 } from "~/schemas/restic";
 import { type } from "arktype";
+
+const findRepository = async (idOrShortId: string) => {
+	return await db.query.repositoriesTable.findFirst({
+		where: or(eq(repositoriesTable.id, idOrShortId), eq(repositoriesTable.shortId, idOrShortId)),
+	});
+};
 
 const listRepositories = async () => {
 	const repositories = await db.query.repositoriesTable.findMany({});
@@ -58,16 +63,6 @@ const encryptConfig = async (config: RepositoryConfig): Promise<RepositoryConfig
 };
 
 const createRepository = async (name: string, config: RepositoryConfig, compressionMode?: CompressionMode) => {
-	const slug = slugify(name, { lower: true, strict: true });
-
-	const existing = await db.query.repositoriesTable.findFirst({
-		where: eq(repositoriesTable.name, slug),
-	});
-
-	if (existing) {
-		throw new ConflictError("Repository with this name already exists");
-	}
-
 	const id = crypto.randomUUID();
 
 	// Determine shortId: use provided config.name for local repo migrations, otherwise generate
@@ -86,7 +81,7 @@ const createRepository = async (name: string, config: RepositoryConfig, compress
 	}
 
 	let processedConfig = config;
-	if (config.backend === "local") {
+	if (config.backend === "local" && !config.isExistingRepository) {
 		processedConfig = { ...config, name: shortId };
 	}
 
@@ -115,7 +110,7 @@ const createRepository = async (name: string, config: RepositoryConfig, compress
 		.values({
 			id,
 			shortId,
-			name: slug,
+			name: name.trim(),
 			type: config.backend,
 			config: encryptedConfig,
 			compressionMode: compressionMode ?? "auto",
@@ -149,10 +144,8 @@ const createRepository = async (name: string, config: RepositoryConfig, compress
 	throw new InternalServerError(`Failed to initialize repository: ${errorMessage}`);
 };
 
-const getRepository = async (name: string) => {
-	const repository = await db.query.repositoriesTable.findFirst({
-		where: eq(repositoriesTable.name, name),
-	});
+const getRepository = async (id: string) => {
+	const repository = await findRepository(id);
 
 	if (!repository) {
 		throw new NotFoundError("Repository not found");
@@ -161,10 +154,8 @@ const getRepository = async (name: string) => {
 	return { repository };
 };
 
-const deleteRepository = async (name: string) => {
-	const repository = await db.query.repositoriesTable.findFirst({
-		where: eq(repositoriesTable.name, name),
-	});
+const deleteRepository = async (id: string) => {
+	const repository = await findRepository(id);
 
 	if (!repository) {
 		throw new NotFoundError("Repository not found");
@@ -172,21 +163,19 @@ const deleteRepository = async (name: string) => {
 
 	// TODO: Add cleanup logic for the actual restic repository files
 
-	await db.delete(repositoriesTable).where(eq(repositoriesTable.name, name));
+	await db.delete(repositoriesTable).where(eq(repositoriesTable.id, repository.id));
 };
 
 /**
  * List snapshots for a given repository
  * If backupId is provided, filter snapshots by that backup ID (tag)
- * @param name Repository name
+ * @param id Repository ID
  * @param backupId Optional backup ID to filter snapshots for a specific backup schedule
  *
  * @returns List of snapshots
  */
-const listSnapshots = async (name: string, backupId?: string) => {
-	const repository = await db.query.repositoriesTable.findFirst({
-		where: eq(repositoriesTable.name, name),
-	});
+const listSnapshots = async (id: string, backupId?: string) => {
+	const repository = await findRepository(id);
 
 	if (!repository) {
 		throw new NotFoundError("Repository not found");
@@ -208,10 +197,8 @@ const listSnapshots = async (name: string, backupId?: string) => {
 	}
 };
 
-const listSnapshotFiles = async (name: string, snapshotId: string, path?: string) => {
-	const repository = await db.query.repositoriesTable.findFirst({
-		where: eq(repositoriesTable.name, name),
-	});
+const listSnapshotFiles = async (id: string, snapshotId: string, path?: string) => {
+	const repository = await findRepository(id);
 
 	if (!repository) {
 		throw new NotFoundError("Repository not found");
@@ -241,7 +228,7 @@ const listSnapshotFiles = async (name: string, snapshotId: string, path?: string
 };
 
 const restoreSnapshot = async (
-	name: string,
+	id: string,
 	snapshotId: string,
 	options?: {
 		include?: string[];
@@ -252,9 +239,7 @@ const restoreSnapshot = async (
 		overwrite?: OverwriteMode;
 	},
 ) => {
-	const repository = await db.query.repositoriesTable.findFirst({
-		where: eq(repositoriesTable.name, name),
-	});
+	const repository = await findRepository(id);
 
 	if (!repository) {
 		throw new NotFoundError("Repository not found");
@@ -277,10 +262,8 @@ const restoreSnapshot = async (
 	}
 };
 
-const getSnapshotDetails = async (name: string, snapshotId: string) => {
-	const repository = await db.query.repositoriesTable.findFirst({
-		where: eq(repositoriesTable.name, name),
-	});
+const getSnapshotDetails = async (id: string, snapshotId: string) => {
+	const repository = await findRepository(id);
 
 	if (!repository) {
 		throw new NotFoundError("Repository not found");
@@ -302,9 +285,7 @@ const getSnapshotDetails = async (name: string, snapshotId: string) => {
 };
 
 const checkHealth = async (repositoryId: string) => {
-	const repository = await db.query.repositoriesTable.findFirst({
-		where: eq(repositoriesTable.id, repositoryId),
-	});
+	const repository = await findRepository(repositoryId);
 
 	if (!repository) {
 		throw new NotFoundError("Repository not found");
@@ -329,10 +310,8 @@ const checkHealth = async (repositoryId: string) => {
 	}
 };
 
-const doctorRepository = async (name: string) => {
-	const repository = await db.query.repositoriesTable.findFirst({
-		where: eq(repositoriesTable.name, name),
-	});
+const doctorRepository = async (id: string) => {
+	const repository = await findRepository(id);
 
 	if (!repository) {
 		throw new NotFoundError("Repository not found");
@@ -420,10 +399,8 @@ const doctorRepository = async (name: string) => {
 	};
 };
 
-const deleteSnapshot = async (name: string, snapshotId: string) => {
-	const repository = await db.query.repositoriesTable.findFirst({
-		where: eq(repositoriesTable.name, name),
-	});
+const deleteSnapshot = async (id: string, snapshotId: string) => {
+	const repository = await findRepository(id);
 
 	if (!repository) {
 		throw new NotFoundError("Repository not found");
@@ -437,10 +414,8 @@ const deleteSnapshot = async (name: string, snapshotId: string) => {
 	}
 };
 
-const updateRepository = async (name: string, updates: { name?: string; compressionMode?: CompressionMode }) => {
-	const existing = await db.query.repositoriesTable.findFirst({
-		where: eq(repositoriesTable.name, name),
-	});
+const updateRepository = async (id: string, updates: { name?: string; compressionMode?: CompressionMode }) => {
+	const existing = await findRepository(id);
 
 	if (!existing) {
 		throw new NotFoundError("Repository not found");
@@ -464,17 +439,7 @@ const updateRepository = async (name: string, updates: { name?: string; compress
 
 	let newName = existing.name;
 	if (updates.name !== undefined && updates.name !== existing.name) {
-		const newSlug = slugify(updates.name, { lower: true, strict: true });
-
-		const conflict = await db.query.repositoriesTable.findFirst({
-			where: and(eq(repositoriesTable.name, newSlug), ne(repositoriesTable.id, existing.id)),
-		});
-
-		if (conflict) {
-			throw new ConflictError("A repository with this name already exists");
-		}
-
-		newName = newSlug;
+		newName = updates.name.trim();
 	}
 
 	const [updated] = await db
