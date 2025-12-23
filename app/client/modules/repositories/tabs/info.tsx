@@ -18,11 +18,19 @@ import {
 	AlertDialogTitle,
 } from "~/client/components/ui/alert-dialog";
 import type { Repository } from "~/client/lib/types";
+import { REPOSITORY_BASE } from "~/client/lib/constants";
 import { updateRepositoryMutation } from "~/client/api-client/@tanstack/react-query.gen";
 import type { CompressionMode, RepositoryConfig } from "~/schemas/restic";
 
 type Props = {
 	repository: Repository;
+};
+
+const getEffectiveLocalPath = (repository: Repository): string | null => {
+	if (repository.type !== "local") return null;
+	const config = repository.config as { name: string; path?: string };
+	const basePath = config.path || REPOSITORY_BASE;
+	return `${basePath}/${config.name}`;
 };
 
 export const RepositoryInfoTabContent = ({ repository }: Props) => {
@@ -108,6 +116,12 @@ export const RepositoryInfoTabContent = ({ repository }: Props) => {
 								<div className="text-sm font-medium text-muted-foreground">Status</div>
 								<p className="mt-1 text-sm">{repository.status || "unknown"}</p>
 							</div>
+							{getEffectiveLocalPath(repository) && (
+								<div className="md:col-span-2">
+									<div className="text-sm font-medium text-muted-foreground">Effective Local Path</div>
+									<p className="mt-1 text-sm font-mono">{getEffectiveLocalPath(repository)}</p>
+								</div>
+							)}
 							<div>
 								<div className="text-sm font-medium text-muted-foreground">Created at</div>
 								<p className="mt-1 text-sm">{new Date(repository.createdAt).toLocaleString()}</p>
