@@ -74,6 +74,11 @@ const ensurePassfile = async () => {
 const buildRepoUrl = (config: RepositoryConfig): string => {
 	switch (config.backend) {
 		case "local":
+			if (config.isExistingRepository) {
+				if (!config.path) throw new Error("Path is required for existing local repositories");
+				return config.path;
+			}
+
 			return config.path ? `${config.path}/${config.name}` : `${REPOSITORY_BASE}/${config.name}`;
 		case "s3":
 			return `s3:${config.endpoint}/${config.bucket}`;
