@@ -205,7 +205,11 @@ async function importRepositories(repositories: unknown[]): Promise<ImportResult
 				const isAlreadyRepo = await restic
 					.snapshots({ ...r.config, isExistingRepository: true } as RepositoryConfig)
 					.then(() => true)
-					.catch(() => false);
+					.catch((e) => {
+ 						const err = e instanceof Error ? e : new Error(String(e));
+						logger.debug(`Repo existence check for '${r.name}': ${err.message}`);
+						return false;
+					});
 
 				if (isAlreadyRepo) {
 					logger.warn(
