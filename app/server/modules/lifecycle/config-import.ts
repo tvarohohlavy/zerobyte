@@ -407,6 +407,7 @@ async function importBackupSchedules(backupSchedules: unknown[]): Promise<Import
 			} catch (e) {
 				const err = e instanceof Error ? e : new Error(String(e));
 				logger.warn(`Could not mount volume ${volume.name}: ${err.message}`);
+				result.warnings++;
 				continue;
 			}
 		}
