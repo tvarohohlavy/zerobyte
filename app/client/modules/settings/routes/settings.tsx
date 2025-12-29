@@ -276,8 +276,8 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
 			</div>
 			<CardContent className="p-6 space-y-4">
 				<p className="text-sm text-muted-foreground max-w-2xl">
-					Export all your volumes, repositories, backup schedules, and notification settings to a JSON file.
-					This can be used to restore your configuration on a new instance or as a backup of your settings.
+					Export all your volumes, repositories, backup schedules, and notification settings to a JSON file. This can be
+					used to restore your configuration on a new instance or as a backup of your settings.
 				</p>
 				<ExportDialog triggerLabel="Export Configuration" />
 			</CardContent>

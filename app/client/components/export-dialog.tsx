@@ -16,13 +16,7 @@ import {
 } from "~/client/components/ui/dialog";
 import { Input } from "~/client/components/ui/input";
 import { Label } from "~/client/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "~/client/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/client/components/ui/select";
 
 type SecretsMode = "exclude" | "encrypted" | "cleartext";
 
@@ -88,9 +82,7 @@ export function ExportDialog({
 
 	const handleExportError = (error: unknown) => {
 		const message =
-			error && typeof error === "object" && "error" in error
-				? (error as { error: string }).error
-				: "Unknown error";
+			error && typeof error === "object" && "error" in error ? (error as { error: string }).error : "Unknown error";
 		toast.error("Export failed", {
 			description: message,
 		});
@@ -134,9 +126,7 @@ export function ExportDialog({
 				className="flex flex-col items-center justify-center gap-2 cursor-pointer h-full w-full border-0 bg-transparent p-0 hover:opacity-80 transition-opacity"
 			>
 				<Download className="h-8 w-8 text-muted-foreground" />
-				<span className="text-sm font-medium text-muted-foreground">
-					{triggerLabel ?? "Export Config"}
-				</span>
+				<span className="text-sm font-medium text-muted-foreground">{triggerLabel ?? "Export Config"}</span>
 			</button>
 		) : (
 			<Button variant={variant} size={size}>
@@ -152,9 +142,7 @@ export function ExportDialog({
 				<form onSubmit={handleExport}>
 					<DialogHeader>
 						<DialogTitle>Export Full Configuration</DialogTitle>
-						<DialogDescription>
-							Export the complete Zerobyte configuration.
-						</DialogDescription>
+						<DialogDescription>Export the complete Zerobyte configuration.</DialogDescription>
 					</DialogHeader>
 
 					<div className="space-y-4 py-4">
@@ -169,7 +157,7 @@ export function ExportDialog({
 							</Label>
 						</div>
 						<p className="text-xs text-muted-foreground ml-7">
-							Include database IDs, timestamps, and runtime state (status, health checks, last backup	info).
+							Include database IDs, timestamps, and runtime state (status, health checks, last backup info).
 						</p>
 
 						<div className="flex items-center justify-between pt-2 border-t">
@@ -208,9 +196,8 @@ export function ExportDialog({
 							</Label>
 						</div>
 						<p className="text-xs text-muted-foreground ml-7">
-							<span className="text-yellow-600 font-medium">⚠️ Security sensitive:</span> The recovery
-							key is the master encryption key for all repositories. Keep this export secure and never
-							share it.
+							<span className="text-yellow-600 font-medium">⚠️ Security sensitive:</span> The recovery key is the master
+							encryption key for all repositories. Keep this export secure and never share it.
 						</p>
 
 						<div className="flex items-center space-x-3">
@@ -224,8 +211,8 @@ export function ExportDialog({
 							</Label>
 						</div>
 						<p className="text-xs text-muted-foreground ml-7">
-							Include the hashed user passwords for seamless migration. The passwords are already securely
-							hashed (argon2).
+							Include the hashed user passwords for seamless migration. The passwords are already securely hashed
+							(argon2).
 						</p>
 
 						<div className="space-y-2 pt-2 border-t">

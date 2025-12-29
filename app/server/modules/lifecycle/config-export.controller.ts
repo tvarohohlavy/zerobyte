@@ -1,7 +1,12 @@
 import { validator } from "hono-openapi";
 import { Hono } from "hono";
 import type { Context } from "hono";
-import { backupSchedulesTable, backupScheduleNotificationsTable, backupScheduleMirrorsTable, usersTable } from "../../db/schema";
+import {
+	type backupSchedulesTable,
+	backupScheduleNotificationsTable,
+	backupScheduleMirrorsTable,
+	usersTable,
+} from "../../db/schema";
 import { db } from "../../db/db";
 import { logger } from "../../utils/logger";
 import { RESTIC_PASS_FILE } from "../../core/constants";
@@ -11,12 +16,7 @@ import { volumeService } from "../volumes/volume.service";
 import { repositoriesService } from "../repositories/repositories.service";
 import { notificationsService } from "../notifications/notifications.service";
 import { backupsService } from "../backups/backups.service";
-import {
-	fullExportBodySchema,
-	fullExportDto,
-	type SecretsMode,
-	type FullExportBody,
-} from "./config-export.dto";
+import { fullExportBodySchema, fullExportDto, type SecretsMode, type FullExportBody } from "./config-export.dto";
 import { requireAuth } from "../auth/auth.middleware";
 
 type ExportParams = {
@@ -27,8 +27,25 @@ type ExportParams = {
 // Keys to exclude when metadata is not included
 const METADATA_KEYS = {
 	ids: ["id", "shortId", "volumeId", "repositoryId", "scheduleId", "destinationId"],
-	timestamps: ["createdAt", "updatedAt", "lastBackupAt", "nextBackupAt", "lastHealthCheck", "lastChecked", "lastCopyAt"],
-	runtimeState: ["status", "lastError", "lastBackupStatus", "lastBackupError", "hasDownloadedResticPassword", "lastCopyStatus", "lastCopyError", "sortOrder"],
+	timestamps: [
+		"createdAt",
+		"updatedAt",
+		"lastBackupAt",
+		"nextBackupAt",
+		"lastHealthCheck",
+		"lastChecked",
+		"lastCopyAt",
+	],
+	runtimeState: [
+		"status",
+		"lastError",
+		"lastBackupStatus",
+		"lastBackupError",
+		"hasDownloadedResticPassword",
+		"lastCopyStatus",
+		"lastCopyError",
+		"sortOrder",
+	],
 };
 
 const ALL_METADATA_KEYS = [...METADATA_KEYS.ids, ...METADATA_KEYS.timestamps, ...METADATA_KEYS.runtimeState];
@@ -46,10 +63,7 @@ function filterMetadataOut<T extends Record<string, unknown>>(obj: T, includeMet
 }
 
 /** Parse export params from request body */
-function parseExportParamsFromBody(body: {
-	includeMetadata?: boolean;
-	secretsMode?: SecretsMode;
-}): ExportParams {
+function parseExportParamsFromBody(body: { includeMetadata?: boolean; secretsMode?: SecretsMode }): ExportParams {
 	const includeMetadata = body.includeMetadata === true;
 	const secretsMode: SecretsMode = body.secretsMode ?? "exclude";
 	return { includeMetadata, secretsMode };
@@ -61,7 +75,7 @@ function parseExportParamsFromBody(body: {
  */
 async function verifyExportPassword(
 	c: Context,
-	password: string
+	password: string,
 ): Promise<{ valid: true; userId: number } | { valid: false; error: string }> {
 	// requireAuth middleware ensures c.get('user') exists
 	const user = c.get("user");
@@ -83,7 +97,7 @@ async function verifyExportPassword(
  */
 async function processSecrets(
 	obj: Record<string, unknown>,
-	secretsMode: SecretsMode
+	secretsMode: SecretsMode,
 ): Promise<Record<string, unknown>> {
 	if (secretsMode === "encrypted") {
 		return obj;
@@ -108,8 +122,8 @@ async function processSecrets(
 				value.map(async (item) =>
 					item && typeof item === "object" && !Array.isArray(item)
 						? processSecrets(item as Record<string, unknown>, secretsMode)
-						: item
-				)
+						: item,
+				),
 			);
 		} else if (value && typeof value === "object") {
 			result[key] = await processSecrets(value as Record<string, unknown>, secretsMode);
@@ -120,10 +134,7 @@ async function processSecrets(
 }
 
 /** Clean and process an entity for export */
-async function exportEntity(
-	entity: Record<string, unknown>,
-	params: ExportParams
-): Promise<Record<string, unknown>> {
+async function exportEntity(entity: Record<string, unknown>, params: ExportParams): Promise<Record<string, unknown>> {
 	const cleaned = filterMetadataOut(entity, params.includeMetadata);
 	return processSecrets(cleaned, params.secretsMode);
 }
@@ -131,7 +142,7 @@ async function exportEntity(
 /** Export multiple entities */
 async function exportEntities<T extends Record<string, unknown>>(
 	entities: T[],
-	params: ExportParams
+	params: ExportParams,
 ): Promise<Record<string, unknown>[]> {
 	return Promise.all(entities.map((e) => exportEntity(e as Record<string, unknown>, params)));
 }
@@ -144,7 +155,7 @@ function transformBackupSchedules(
 	volumeMap: Map<number, string>,
 	repoMap: Map<string, string>,
 	notificationMap: Map<number, string>,
-	params: ExportParams
+	params: ExportParams,
 ) {
 	return schedules.map((schedule) => {
 		const assignments = scheduleNotifications
@@ -173,11 +184,7 @@ function transformBackupSchedules(
 
 export const configExportController = new Hono()
 	.use(requireAuth)
-	.post(
-		"/export",
-		fullExportDto,
-		validator("json", fullExportBodySchema),
-		async (c) => {
+	.post("/export", fullExportDto, validator("json", fullExportBodySchema), async (c) => {
 		try {
 			const body = c.req.valid("json") as FullExportBody;
 
@@ -214,7 +221,7 @@ export const configExportController = new Hono()
 				volumeMap,
 				repoMap,
 				notificationMap,
-				params
+				params,
 			);
 
 			const [exportVolumes, exportRepositories, exportNotifications] = await Promise.all([
@@ -255,5 +262,4 @@ export const configExportController = new Hono()
 			logger.error(`Config export failed: ${err instanceof Error ? err.message : String(err)}`);
 			return c.json({ error: err instanceof Error ? err.message : "Failed to export config" }, 500);
 		}
-	}
-);
+	});
