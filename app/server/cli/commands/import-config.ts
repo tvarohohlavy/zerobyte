@@ -92,20 +92,21 @@ export const importConfigCommand = new Command("import-config")
 			return;
 		}
 
-		console.log("🚀 Starting import...\n");
-
 		try {
 			// Ensure database is initialized with migrations
 			const { runDbMigrations } = await import("../../db/db");
 			runDbMigrations();
 
 			const { applyConfigImport } = await import("../../modules/lifecycle/config-import");
-			await applyConfigImport(config);
+			const result = await applyConfigImport(config);
 
-			console.log("\n✅ Import completed successfully");
+			// Exit with error code if there were errors
+			if (result.errors > 0) {
+				process.exit(1);
+			}
 		} catch (e) {
 			const err = e instanceof Error ? e : new Error(String(e));
-			console.error(`\n❌ Import failed: ${err.message}`);
+			console.error(`❌ Import failed: ${err.message}`);
 			process.exit(1);
 		}
 	});

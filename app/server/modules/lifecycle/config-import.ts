@@ -34,6 +34,12 @@ type ImportConfig = {
 	recoveryKey: string | null;
 };
 
+export type ImportResult = {
+	succeeded: number;
+	warnings: number;
+	errors: number;
+};
+
 function interpolateEnvVars(value: unknown): unknown {
 	if (typeof value === "string") {
 		return value.replace(/\$\{([^}]+)\}/g, (_, v) => {
@@ -94,11 +100,13 @@ function parseImportConfig(configRaw: unknown): ImportConfig {
 	};
 }
 
-async function writeRecoveryKeyFromConfig(recoveryKey: string | null): Promise<void> {
+async function writeRecoveryKeyFromConfig(recoveryKey: string | null): Promise<ImportResult> {
+	const result: ImportResult = { succeeded: 0, warnings: 0, errors: 0 };
+
 	try {
 		const fs = await import("node:fs/promises");
 		const { RESTIC_PASS_FILE } = await import("../../core/constants.js");
-		if (!recoveryKey) return;
+		if (!recoveryKey) return result;
 
 		if (typeof recoveryKey !== "string" || recoveryKey.length !== 64 || !/^[a-fA-F0-9]{64}$/.test(recoveryKey)) {
 			throw new Error("Recovery key must be a 64-character hex string");
@@ -108,18 +116,25 @@ async function writeRecoveryKeyFromConfig(recoveryKey: string | null): Promise<v
 			() => false,
 		);
 		if (passFileExists) {
-			logger.info(`Restic passfile already exists at ${RESTIC_PASS_FILE}; skipping config recovery key write`);
-			return;
+			logger.warn(`Restic passfile already exists at ${RESTIC_PASS_FILE}; skipping config recovery key write`);
+			result.warnings++;
+			return result;
 		}
 		await fs.writeFile(RESTIC_PASS_FILE, recoveryKey, { mode: 0o600 });
 		logger.info(`Recovery key written from config to ${RESTIC_PASS_FILE}`);
+		result.succeeded++;
 	} catch (err) {
 		const e = err instanceof Error ? err : new Error(String(err));
 		logger.error(`Failed to write recovery key from config: ${e.message}`);
+		result.errors++;
 	}
+
+	return result;
 }
 
-async function importVolumes(volumes: unknown[]): Promise<void> {
+async function importVolumes(volumes: unknown[]): Promise<ImportResult> {
+	const result: ImportResult = { succeeded: 0, warnings: 0, errors: 0 };
+
 	for (const v of volumes) {
 		try {
 			if (!isRecord(v) || typeof v.name !== "string" || !isRecord(v.config) || typeof v.config.backend !== "string") {
@@ -127,6 +142,7 @@ async function importVolumes(volumes: unknown[]): Promise<void> {
 			}
 			await volumeService.createVolume(v.name, v.config as BackendConfig);
 			logger.info(`Initialized volume from config: ${v.name}`);
+			result.succeeded++;
 
 			// If autoRemount is explicitly false, update the volume (default is true)
 			if (v.autoRemount === false) {
@@ -136,17 +152,78 @@ async function importVolumes(volumes: unknown[]): Promise<void> {
 		} catch (e) {
 			const err = e instanceof Error ? e : new Error(String(e));
 			logger.warn(`Volume not created: ${err.message}`);
+			result.warnings++;
 		}
 	}
+
+	return result;
 }
 
-async function importRepositories(repositories: unknown[]): Promise<void> {
+async function importRepositories(repositories: unknown[]): Promise<ImportResult> {
+	const result: ImportResult = { succeeded: 0, warnings: 0, errors: 0 };
 	const repoServiceModule = await import("../repositories/repositories.service");
+	const { buildRepoUrl, restic } = await import("../../utils/restic");
+
+	// Get existing repositories and build sets for duplicate detection
+	const existingRepos = await repoServiceModule.repositoriesService.listRepositories();
+	const existingNames = new Set(existingRepos.map((repo) => repo.name));
+	const existingUrls = new Set<string>();
+
+	for (const repo of existingRepos) {
+		try {
+			// Config fields used for URL (path, bucket, endpoint, etc.) are not encrypted
+			const url = buildRepoUrl(repo.config as RepositoryConfig);
+			existingUrls.add(url);
+		} catch (e) {
+			const err = e instanceof Error ? e : new Error(String(e));
+			logger.warn(`Could not build URL for existing repository '${repo.name}': ${err.message}`);
+		}
+	}
+
 	for (const r of repositories) {
 		try {
 			if (!isRecord(r) || typeof r.name !== "string" || !isRecord(r.config) || typeof r.config.backend !== "string") {
 				throw new Error("Invalid repository entry");
 			}
+
+			// Skip if a repository pointing to the same location is already registered in DB
+			try {
+				const incomingUrl = buildRepoUrl(r.config as RepositoryConfig);
+				if (existingUrls.has(incomingUrl)) {
+					logger.warn(`Skipping '${r.name}': another repository is already registered for location ${incomingUrl}`);
+					result.warnings++;
+					continue;
+				}
+			} catch (e) {
+				const err = e instanceof Error ? e : new Error(String(e));
+				logger.warn(`Could not build URL for '${r.name}' to check duplicates: ${err.message}`);
+			}
+
+			// For local repos without isExistingRepository, check if the provided path is already a restic repo
+			// This catches the case where user forgot to set isExistingRepository: true
+			if (r.config.backend === "local" && !r.config.isExistingRepository) {
+				const isAlreadyRepo = await restic
+					.snapshots({ ...r.config, isExistingRepository: true } as RepositoryConfig)
+					.then(() => true)
+					.catch(() => false);
+
+				if (isAlreadyRepo) {
+					logger.warn(
+						`Skipping '${r.name}': path '${r.config.path}' is already a restic repository. ` +
+							`Set "isExistingRepository": true to import it, or use a different path for a new repository.`,
+					);
+					result.warnings++;
+					continue;
+				}
+			}
+
+			// Skip if a repository with the same name already exists (fallback for repos without deterministic paths)
+			if (existingNames.has(r.name)) {
+				logger.warn(`Skipping '${r.name}': a repository with this name already exists`);
+				result.warnings++;
+				continue;
+			}
+
 			const compressionMode =
 				r.compressionMode === "auto" || r.compressionMode === "off" || r.compressionMode === "max"
 					? r.compressionMode
@@ -157,14 +234,19 @@ async function importRepositories(repositories: unknown[]): Promise<void> {
 				compressionMode,
 			);
 			logger.info(`Initialized repository from config: ${r.name}`);
+			result.succeeded++;
 		} catch (e) {
 			const err = e instanceof Error ? e : new Error(String(e));
 			logger.warn(`Repository not created: ${err.message}`);
+			result.warnings++;
 		}
 	}
+
+	return result;
 }
 
-async function importNotificationDestinations(notificationDestinations: unknown[]): Promise<void> {
+async function importNotificationDestinations(notificationDestinations: unknown[]): Promise<ImportResult> {
+	const result: ImportResult = { succeeded: 0, warnings: 0, errors: 0 };
 	const notificationsServiceModule = await import("../notifications/notifications.service");
 	for (const n of notificationDestinations) {
 		try {
@@ -176,6 +258,7 @@ async function importNotificationDestinations(notificationDestinations: unknown[
 				n.config as NotificationConfig,
 			);
 			logger.info(`Initialized notification destination from config: ${n.name}`);
+			result.succeeded++;
 
 			// If enabled is explicitly false, update the destination (default is true)
 			if (n.enabled === false) {
@@ -185,8 +268,11 @@ async function importNotificationDestinations(notificationDestinations: unknown[
 		} catch (e) {
 			const err = e instanceof Error ? e : new Error(String(e));
 			logger.warn(`Notification destination not created: ${err.message}`);
+			result.warnings++;
 		}
 	}
+
+	return result;
 }
 
 function getScheduleVolumeName(schedule: Record<string, unknown>): string | null {
@@ -261,8 +347,9 @@ async function attachScheduleNotifications(
 	}
 }
 
-async function importBackupSchedules(backupSchedules: unknown[]): Promise<void> {
-	if (!Array.isArray(backupSchedules) || backupSchedules.length === 0) return;
+async function importBackupSchedules(backupSchedules: unknown[]): Promise<ImportResult> {
+	const result: ImportResult = { succeeded: 0, warnings: 0, errors: 0 };
+	if (!Array.isArray(backupSchedules) || backupSchedules.length === 0) return result;
 
 	const backupServiceModule = await import("../backups/backups.service");
 	const notificationsServiceModule = await import("../notifications/notifications.service");
@@ -282,28 +369,33 @@ async function importBackupSchedules(backupSchedules: unknown[]): Promise<void> 
 		const volumeName = getScheduleVolumeName(s);
 		if (typeof volumeName !== "string" || volumeName.length === 0) {
 			logger.warn("Backup schedule not created: Missing volume name");
+			result.warnings++;
 			continue;
 		}
 		const volume = volumeByName.get(volumeName);
 		if (!volume) {
 			logger.warn(`Backup schedule not created: Volume '${volumeName}' not found`);
+			result.warnings++;
 			continue;
 		}
 
 		const repositoryName = getScheduleRepositoryName(s);
 		if (typeof repositoryName !== "string" || repositoryName.length === 0) {
 			logger.warn("Backup schedule not created: Missing repository name");
+			result.warnings++;
 			continue;
 		}
 		const repository = repoByName.get(repositoryName);
 		if (!repository) {
 			logger.warn(`Backup schedule not created: Repository '${repositoryName}' not found`);
+			result.warnings++;
 			continue;
 		}
 
 		const scheduleName = typeof s.name === "string" && s.name.length > 0 ? s.name : `${volumeName}-${repositoryName}`;
 		if (typeof s.cronExpression !== "string" || s.cronExpression.length === 0) {
 			logger.warn(`Backup schedule not created: Missing cronExpression for '${scheduleName}'`);
+			result.warnings++;
 			continue;
 		}
 
@@ -335,9 +427,11 @@ async function importBackupSchedules(backupSchedules: unknown[]): Promise<void> 
 				oneFileSystem: typeof s.oneFileSystem === "boolean" ? s.oneFileSystem : undefined,
 			});
 			logger.info(`Initialized backup schedule from config: ${scheduleName}`);
+			result.succeeded++;
 		} catch (e) {
 			const err = e instanceof Error ? e : new Error(String(e));
 			logger.warn(`Backup schedule not created: ${err.message}`);
+			result.warnings++;
 			continue;
 		}
 
@@ -354,6 +448,8 @@ async function importBackupSchedules(backupSchedules: unknown[]): Promise<void> 
 			await attachScheduleMirrors(createdSchedule.id, s.mirrors, repoByName, backupServiceModule);
 		}
 	}
+
+	return result;
 }
 
 async function attachScheduleMirrors(
@@ -403,17 +499,20 @@ async function attachScheduleMirrors(
 	}
 }
 
-async function setupInitialUser(users: unknown[], recoveryKey: string | null): Promise<void> {
+async function setupInitialUser(users: unknown[], recoveryKey: string | null): Promise<ImportResult> {
+	const result: ImportResult = { succeeded: 0, warnings: 0, errors: 0 };
+
 	try {
 		const { authService } = await import("../auth/auth.service");
 		const hasUsers = await authService.hasUsers();
-		if (hasUsers) return;
-		if (!Array.isArray(users) || users.length === 0) return;
+		if (hasUsers) return result;
+		if (!Array.isArray(users) || users.length === 0) return result;
 
 		if (users.length > 1) {
 			logger.warn(
 				"Multiple users provided in config. Zerobyte currently supports a single initial user; extra entries will be ignored.",
 			);
+			result.warnings++;
 		}
 
 		for (const u of users) {
@@ -429,10 +528,12 @@ async function setupInitialUser(users: unknown[], recoveryKey: string | null): P
 							typeof u.hasDownloadedResticPassword === "boolean" ? u.hasDownloadedResticPassword : Boolean(recoveryKey),
 					});
 					logger.info(`User '${u.username}' imported with password hash from config.`);
+					result.succeeded++;
 					break;
 				} catch (error) {
 					const err = error instanceof Error ? error : new Error(String(error));
 					logger.warn(`User '${u.username}' not imported: ${err.message}`);
+					result.warnings++;
 				}
 				continue;
 			}
@@ -446,38 +547,70 @@ async function setupInitialUser(users: unknown[], recoveryKey: string | null): P
 						await db.update(usersTable).set({ hasDownloadedResticPassword }).where(eq(usersTable.id, user.id));
 					}
 					logger.info(`User '${u.username}' created from config.`);
+					result.succeeded++;
 					break;
 				} catch (error) {
 					const err = error instanceof Error ? error : new Error(String(error));
 					logger.warn(`User '${u.username}' not created: ${err.message}`);
+					result.warnings++;
 				}
 				continue;
 			}
 
 			logger.warn(`User '${u.username}' missing passwordHash/password; skipping`);
+			result.warnings++;
 		}
 	} catch (err) {
 		const e = err instanceof Error ? err : new Error(String(err));
 		logger.error(`Automated user setup failed: ${e.message}`);
+		result.errors++;
 	}
+
+	return result;
 }
 
-async function runImport(config: ImportConfig): Promise<void> {
-	await writeRecoveryKeyFromConfig(config.recoveryKey);
+async function runImport(config: ImportConfig): Promise<ImportResult> {
+	const result: ImportResult = { succeeded: 0, warnings: 0, errors: 0 };
 
-	await importVolumes(config.volumes);
-	await importRepositories(config.repositories);
-	await importNotificationDestinations(config.notificationDestinations);
-	await importBackupSchedules(config.backupSchedules);
-	await setupInitialUser(config.users, config.recoveryKey);
+	const recoveryKeyResult = await writeRecoveryKeyFromConfig(config.recoveryKey);
+	const volumeResult = await importVolumes(config.volumes);
+	const repoResult = await importRepositories(config.repositories);
+	const notifResult = await importNotificationDestinations(config.notificationDestinations);
+	const scheduleResult = await importBackupSchedules(config.backupSchedules);
+	const userResult = await setupInitialUser(config.users, config.recoveryKey);
+
+	for (const r of [recoveryKeyResult, volumeResult, repoResult, notifResult, scheduleResult, userResult]) {
+		result.succeeded += r.succeeded;
+		result.warnings += r.warnings;
+		result.errors += r.errors;
+	}
+
+	return result;
+}
+
+function logImportSummary(result: ImportResult): void {
+	if (result.errors > 0) {
+		logger.error(
+			`Config import completed with ${result.errors} error(s) and ${result.warnings} warning(s), ${result.succeeded} item(s) imported`,
+		);
+	} else if (result.warnings > 0) {
+		logger.warn(`Config import completed with ${result.warnings} warning(s), ${result.succeeded} item(s) imported`);
+	} else if (result.succeeded > 0) {
+		logger.info(`Config import completed successfully: ${result.succeeded} item(s) imported`);
+	} else {
+		logger.info("Config import completed: no items to import");
+	}
 }
 
 /**
  * Import configuration from a raw config object (used by CLI)
  */
-export async function applyConfigImport(configRaw: unknown): Promise<void> {
+export async function applyConfigImport(configRaw: unknown): Promise<ImportResult> {
+	logger.info("Starting config import...");
 	const config = parseImportConfig(configRaw);
-	await runImport(config);
+	const result = await runImport(config);
+	logImportSummary(result);
+	return result;
 }
 
 /**
@@ -485,12 +618,16 @@ export async function applyConfigImport(configRaw: unknown): Promise<void> {
  */
 export async function applyConfigImportFromFile(): Promise<void> {
 	const configRaw = await loadConfigFromFile();
+	if (configRaw === null) return; // No config file, nothing to do
+
+	logger.info("Starting config import from file...");
 	const config = parseImportConfig(configRaw);
 
 	try {
-		await runImport(config);
+		const result = await runImport(config);
+		logImportSummary(result);
 	} catch (e) {
 		const err = e instanceof Error ? e : new Error(String(e));
-		logger.error(`Failed to initialize from config: ${err.message}`);
+		logger.error(`Config import failed: ${err.message}`);
 	}
 }

@@ -1,2 +1,4 @@
 .env
-zerobyte.config.json
+
+*.json
+!zerobyte.config.example.json

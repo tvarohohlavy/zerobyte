@@ -160,8 +160,11 @@ See the runnable example:
 
 The config file is applied on startup using a **create-only** approach:
 
-- Resources defined in the config are only created if they don't already exist in the database
-- Existing resources with the same name are **not overwritten** (a warning is logged and the config entry is skipped)
+- **Volumes, notifications, schedules**: Skipped if a resource with the same name already exists
+- **Repositories**: Skipped if any of these conditions are met:
+  - A repository pointing to the same location (path/bucket/endpoint) is already registered
+  - For local repos: the path is already a restic repository (set `isExistingRepository: true` to import it)
+  - A repository with the same name already exists
 - Changes made via the UI are preserved across container restarts
 - To update a resource from config, either modify it via the UI or delete it first
 
@@ -303,35 +306,38 @@ For key-based authentication:
 
 ### Repository types
 
-#### Local
+#### Local (new repository)
+
+Creates a new restic repository. The `path` is optional and defaults to `/var/lib/zerobyte/repositories`:
 
 ```json
 {
   "name": "local-repo",
   "config": {
-    "backend": "local",
-    "path": "/var/lib/zerobyte/repositories"
+    "backend": "local"
   },
   "compressionMode": "auto"
 }
 ```
 
-Note for importing existing local repositories (migration):
+The actual repository will be created at `{path}/{auto-generated-id}`.
 
-- include `config.name` and set `config.isExistingRepository: true`
-- the actual restic repo is stored at `{path}/{name}`
+#### Local (existing repository)
+
+To import an existing restic repository, set `isExistingRepository: true` and provide the **full path to the repository root**:
 
 ```json
 {
   "name": "my-local-repo",
   "config": {
     "backend": "local",
-    "path": "/var/lib/zerobyte/repositories",
-    "name": "abc123",
+    "path": "/var/lib/zerobyte/repositories/abc123",
     "isExistingRepository": true
   }
 }
 ```
+
+Note: The `path` must point directly to the restic repository root (the directory containing `config`, `data/`, `keys/`, etc.).
 
 #### S3-compatible
 
@@ -340,6 +346,7 @@ Note for importing existing local repositories (migration):
   "name": "backup-repo",
   "config": {
     "backend": "s3",
+    "endpoint": "s3.amazonaws.com",
     "bucket": "mybucket",
     "accessKeyId": "${ACCESS_KEY_ID}",
     "secretAccessKey": "${SECRET_ACCESS_KEY}"

@@ -64,15 +64,23 @@
 		{
 			"name": "local-repo",
 			"config": {
-				"backend": "local",
-				"path": "/var/lib/zerobyte/repositories"
+				"backend": "local"
 			},
 			"compressionMode": "auto"
+		},
+		{
+			"name": "existing-local-repo",
+			"config": {
+				"backend": "local",
+				"path": "/var/lib/zerobyte/repositories/abc123",
+				"isExistingRepository": true
+			}
 		},
 		{
 			"name": "s3-repo",
 			"config": {
 				"backend": "s3",
+				"endpoint": "s3.amazonaws.com",
 				"bucket": "mybucket",
 				"accessKeyId": "${ACCESS_KEY_ID}",
 				"secretAccessKey": "${SECRET_ACCESS_KEY}"
