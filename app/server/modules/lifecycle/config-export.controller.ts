@@ -9,7 +9,7 @@ import {
 } from "../../db/schema";
 import { db } from "../../db/db";
 import { logger } from "../../utils/logger";
-import { RESTIC_PASS_FILE } from "../../core/constants";
+import { RESTIC_PASS_FILE, REPOSITORY_BASE } from "../../core/constants";
 import { cryptoUtils } from "../../utils/crypto";
 import { authService } from "../auth/auth.service";
 import { volumeService } from "../volumes/volume.service";
@@ -230,14 +230,22 @@ export const configExportController = new Hono()
 				exportEntities(notifications, params),
 			]);
 
-			// Add isExistingRepository flag to all repository configs for import compatibility
-			const exportRepositories = exportRepositoriesRaw.map((repo) => ({
-				...repo,
-				config:
-					repo.config && typeof repo.config === "object"
-						? { ...(repo.config as Record<string, unknown>), isExistingRepository: true }
-						: repo.config,
-			}));
+			// Add isExistingRepository flag and path to all repository configs for import compatibility
+			const exportRepositories = exportRepositoriesRaw.map((repo) => {
+				if (!repo.config || typeof repo.config !== "object") {
+					return repo;
+				}
+
+				const config = repo.config as Record<string, unknown>;
+				const updatedConfig: Record<string, unknown> = { ...config, isExistingRepository: true };
+
+				// For local repos, compute and add the full path if not already present
+				if (config.backend === "local" && !config.path && typeof config.name === "string") {
+					updatedConfig.path = `${REPOSITORY_BASE}/${config.name}`;
+				}
+
+				return { ...repo, config: updatedConfig };
+			});
 
 			let recoveryKey: string | undefined;
 			if (includeRecoveryKey) {
