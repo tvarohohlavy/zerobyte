@@ -224,11 +224,20 @@ export const configExportController = new Hono()
 				params,
 			);
 
-			const [exportVolumes, exportRepositories, exportNotifications] = await Promise.all([
+			const [exportVolumes, exportRepositoriesRaw, exportNotifications] = await Promise.all([
 				exportEntities(volumes, params),
 				exportEntities(repositories, params),
 				exportEntities(notifications, params),
 			]);
+
+			// Add isExistingRepository flag to all repository configs for import compatibility
+			const exportRepositories = exportRepositoriesRaw.map((repo) => ({
+				...repo,
+				config:
+					repo.config && typeof repo.config === "object"
+						? { ...(repo.config as Record<string, unknown>), isExistingRepository: true }
+						: repo.config,
+			}));
 
 			let recoveryKey: string | undefined;
 			if (includeRecoveryKey) {
