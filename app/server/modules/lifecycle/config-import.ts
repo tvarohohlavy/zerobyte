@@ -159,7 +159,9 @@ async function importVolumes(volumes: unknown[]): Promise<ImportResult> {
 				throw new Error("Invalid volume entry");
 			}
 
-			if (existingNames.has(v.name)) {
+			// The service uses slugify to normalize the name, so we check against stored names
+			const slugifiedName = slugify(v.name, { lower: true, strict: true });
+			if (existingNames.has(slugifiedName)) {
 				logger.info(`Volume '${v.name}' already exists`);
 				result.skipped++;
 				continue;
@@ -244,7 +246,8 @@ async function importRepositories(repositories: unknown[]): Promise<ImportResult
 			}
 
 			// Skip if a repository with the same name already exists (fallback for repos without deterministic paths)
-			if (existingNames.has(r.name)) {
+			// Repository names are stored trimmed
+			if (existingNames.has(r.name.trim())) {
 				logger.info(`Repository '${r.name}': a repository with this name already exists`);
 				result.skipped++;
 				continue;
@@ -457,7 +460,9 @@ async function importBackupSchedules(backupSchedules: unknown[]): Promise<Import
 			result.warnings++;
 			continue;
 		}
-		const volume = volumeByName.get(volumeName);
+		// Volume names are stored slugified
+		const volumeSlug = slugify(volumeName, { lower: true, strict: true });
+		const volume = volumeByName.get(volumeSlug);
 		if (!volume) {
 			logger.warn(`Backup schedule not processed: Volume '${volumeName}' not found`);
 			result.warnings++;
@@ -470,7 +475,8 @@ async function importBackupSchedules(backupSchedules: unknown[]): Promise<Import
 			result.warnings++;
 			continue;
 		}
-		const repository = repoByName.get(repositoryName);
+		// Repository names are stored trimmed
+		const repository = repoByName.get(repositoryName.trim());
 		if (!repository) {
 			logger.warn(`Backup schedule not processed: Repository '${repositoryName}' not found`);
 			result.warnings++;
@@ -589,7 +595,8 @@ async function attachScheduleMirrors(
 				continue;
 			}
 
-			const repo = repoByName.get(repoName);
+			// Repository names are stored trimmed
+			const repo = repoByName.get(repoName.trim());
 			if (!repo) {
 				logger.warn(`Mirror repository '${repoName}' not found for schedule '${scheduleName}'`);
 				result.warnings++;
