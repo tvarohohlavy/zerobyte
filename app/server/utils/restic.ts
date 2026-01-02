@@ -157,7 +157,7 @@ export const buildEnv = async (config: RepositoryConfig) => {
 			}
 			if (config.cacert) {
 				const decryptedCert = await cryptoUtils.resolveSecret(config.cacert);
-				const certPath = path.join("/tmp", `rest-server-cacert-${crypto.randomBytes(8).toString("hex")}.pem`);
+				const certPath = path.join("/tmp", `zerobyte-cacert-${crypto.randomBytes(8).toString("hex")}.pem`);
 				await fs.writeFile(certPath, decryptedCert, { mode: 0o600 });
 				env.RESTIC_CACERT = certPath;
 			}
@@ -855,8 +855,8 @@ const copy = async (
 
 	const res = await safeSpawn({ command: "restic", args, env });
 
-	await cleanupTemporaryKeys(sourceConfig, sourceEnv);
-	await cleanupTemporaryKeys(destConfig, destEnv);
+	await cleanupTemporaryKeys(sourceEnv);
+	await cleanupTemporaryKeys(destEnv);
 
 	const { stdout, stderr } = res;
 
@@ -872,17 +872,20 @@ const copy = async (
 	};
 };
 
-export const cleanupTemporaryKeys = async (config: RepositoryConfig, env: Record<string, string>) => {
-	if (config.backend === "sftp") {
-		if (env._SFTP_KEY_PATH) {
-			await fs.unlink(env._SFTP_KEY_PATH).catch(() => {});
-		}
-		if (env._SFTP_KNOWN_HOSTS_PATH) {
-			await fs.unlink(env._SFTP_KNOWN_HOSTS_PATH).catch(() => {});
-		}
-	} else if (config.isExistingRepository && config.customPassword && env.RESTIC_PASSWORD_FILE) {
+export const cleanupTemporaryKeys = async (env: Record<string, string>) => {
+	if (env._SFTP_KEY_PATH) {
+		await fs.unlink(env._SFTP_KEY_PATH).catch(() => {});
+	}
+
+	if (env._SFTP_KNOWN_HOSTS_PATH) {
+		await fs.unlink(env._SFTP_KNOWN_HOSTS_PATH).catch(() => {});
+	}
+
+	if (env.RESTIC_PASSWORD_FILE) {
 		await fs.unlink(env.RESTIC_PASSWORD_FILE).catch(() => {});
-	} else if (config.backend === "gcs" && env.GOOGLE_APPLICATION_CREDENTIALS) {
+	}
+
+	if (env.GOOGLE_APPLICATION_CREDENTIALS) {
 		await fs.unlink(env.GOOGLE_APPLICATION_CREDENTIALS).catch(() => {});
 	}
 

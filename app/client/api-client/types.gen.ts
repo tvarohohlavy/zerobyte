@@ -838,7 +838,9 @@ export type ListRepositoriesResponses = {
         } | {
             backend: 'rest';
             url: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
             password?: string;
             path?: string;
@@ -917,7 +919,9 @@ export type CreateRepositoryData = {
         } | {
             backend: 'rest';
             url: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
             password?: string;
             path?: string;
@@ -1058,7 +1062,9 @@ export type GetRepositoryResponses = {
         } | {
             backend: 'rest';
             url: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
             password?: string;
             path?: string;
@@ -1164,7 +1170,9 @@ export type UpdateRepositoryResponses = {
         } | {
             backend: 'rest';
             url: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
             password?: string;
             path?: string;
@@ -1487,7 +1495,9 @@ export type ListBackupSchedulesResponses = {
             } | {
                 backend: 'rest';
                 url: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 password?: string;
                 path?: string;
@@ -1749,7 +1759,9 @@ export type GetBackupScheduleResponses = {
             } | {
                 backend: 'rest';
                 url: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 password?: string;
                 path?: string;
@@ -1992,7 +2004,9 @@ export type GetBackupScheduleForVolumeResponses = {
             } | {
                 backend: 'rest';
                 url: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 password?: string;
                 path?: string;
@@ -2211,6 +2225,7 @@ export type GetScheduleNotificationsResponses = {
                 priority: 'default' | 'high' | 'low' | 'max' | 'min';
                 topic: string;
                 type: 'ntfy';
+                accessToken?: string;
                 password?: string;
                 serverUrl?: string;
                 username?: string;
@@ -2310,6 +2325,7 @@ export type UpdateScheduleNotificationsResponses = {
                 priority: 'default' | 'high' | 'low' | 'max' | 'min';
                 topic: string;
                 type: 'ntfy';
+                accessToken?: string;
                 password?: string;
                 serverUrl?: string;
                 username?: string;
@@ -2420,7 +2436,9 @@ export type GetScheduleMirrorsResponses = {
             } | {
                 backend: 'rest';
                 url: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 password?: string;
                 path?: string;
@@ -2526,7 +2544,9 @@ export type UpdateScheduleMirrorsResponses = {
             } | {
                 backend: 'rest';
                 url: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 password?: string;
                 path?: string;
@@ -2646,6 +2666,7 @@ export type ListNotificationDestinationsResponses = {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
@@ -2716,6 +2737,7 @@ export type CreateNotificationDestinationData = {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
@@ -2785,6 +2807,7 @@ export type CreateNotificationDestinationResponses = {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
@@ -2901,6 +2924,7 @@ export type GetNotificationDestinationResponses = {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
@@ -2971,6 +2995,7 @@ export type UpdateNotificationDestinationData = {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
@@ -3050,6 +3075,7 @@ export type UpdateNotificationDestinationResponses = {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;

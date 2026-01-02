@@ -13,6 +13,7 @@ import { Textarea } from "../../../../components/ui/textarea";
 import { Checkbox } from "../../../../components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../../../components/ui/tooltip";
 import type { RepositoryFormValues } from "../create-repository-form";
+import { cn } from "~/client/lib/utils";
 
 type Props = {
 	form: UseFormReturn<RepositoryFormValues>;
@@ -52,25 +53,20 @@ export const RestRepositoryForm = ({ form }: Props) => {
 											disabled={!!cacert}
 											onCheckedChange={(checked) => {
 												field.onChange(checked);
-												if (checked) {
-													form.setValue("cacert", "");
-												}
 											}}
 										/>
 									</div>
 								</TooltipTrigger>
-								{cacert && (
-									<TooltipContent>
-										<p className="max-w-xs">
-											This option is disabled because a CA certificate is provided. Remove the CA certificate to skip
-											TLS validation instead.
-										</p>
-									</TooltipContent>
-								)}
+								<TooltipContent className={cn({ hidden: !cacert })}>
+									<p className="max-w-xs">
+										This option is disabled because a CA certificate is provided. Remove the CA certificate to skip TLS
+										validation instead.
+									</p>
+								</TooltipContent>
 							</Tooltip>
 						</FormControl>
 						<div className="space-y-1 leading-none">
-							<FormLabel>Skip TLS Certificate Verification</FormLabel>
+							<FormLabel>Skip TLS certificate verification</FormLabel>
 							<FormDescription>
 								Disable TLS certificate verification if rest server is https and uses a self-signed certificate. This is
 								insecure and should only be used for testing.
@@ -94,28 +90,19 @@ export const RestRepositoryForm = ({ form }: Props) => {
 											rows={6}
 											disabled={insecureTls}
 											{...field}
-											value={insecureTls ? "" : field.value}
-											onChange={(e) => {
-												field.onChange(e);
-												if (e.target.value) {
-													form.setValue("insecureTls", false);
-												}
-											}}
 										/>
 									</div>
 								</TooltipTrigger>
-								{insecureTls && (
-									<TooltipContent>
-										<p className="max-w-xs">
-											CA certificate is disabled because TLS validation is being skipped. Uncheck "Skip TLS Certificate
-											Verification" to provide a custom CA certificate.
-										</p>
-									</TooltipContent>
-								)}
+								<TooltipContent className={cn({ hidden: !insecureTls })}>
+									<p className="max-w-xs">
+										CA certificate is disabled because TLS validation is being skipped. Uncheck "Skip TLS Certificate
+										Verification" to provide a custom CA certificate.
+									</p>
+								</TooltipContent>
 							</Tooltip>
 						</FormControl>
 						<FormDescription>
-							Custom CA certificate for self-signed certificates (PEM format).{" "}
+							Custom CA certificate for self-signed certificates (PEM format).&nbsp;
 							<a
 								href="https://restic.readthedocs.io/en/stable/030_preparing_a_new_repo.html#rest-server"
 								target="_blank"
