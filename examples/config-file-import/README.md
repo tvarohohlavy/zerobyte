@@ -1,6 +1,6 @@
 # Config file import (Infrastructure as Code)
 
-Zerobyte supports **config file import** on startup.
+Zerobyte supports **config file import** via the CLI.
 This lets you pre-configure volumes, repositories, backup schedules, notification destinations, and an initial user.
 
 This example includes:
@@ -13,7 +13,7 @@ This example includes:
 
 - Docker + Docker Compose
 
-This example includes `SYS_ADMIN` and `/dev/fuse` because it’s compatible with remote volume mounts (SMB/NFS/WebDAV).
+This example includes `SYS_ADMIN` and `/dev/fuse` because it's compatible with remote volume mounts (SMB/NFS/WebDAV).
 
 ## Setup
 
@@ -48,31 +48,19 @@ This is the recommended workflow for quick testing: if you don't have your own J
 docker compose up -d
 ```
 
-6. Access the UI at `http://localhost:4096`.
+6. Run the config import:
+
+```bash
+docker compose exec zerobyte bun run cli import-config --config /app/zerobyte.config.json
+```
+
+7. Access the UI at `http://localhost:4096`.
 
 ## Notes
 
-### Import methods
+### CLI import command
 
-Zerobyte supports two ways to import configuration:
-
-#### Method 1: Environment variable (automatic on startup)
-
-Set `ZEROBYTE_CONFIG_IMPORT=true` and the import runs automatically when the container starts:
-
-```yaml
-services:
-  zerobyte:
-    environment:
-      - ZEROBYTE_CONFIG_IMPORT=true
-      - ZEROBYTE_CONFIG_PATH=/app/zerobyte.config.json  # optional, this is the default
-```
-
-This is ideal for automated deployments where you want `docker compose up` to fully configure the instance.
-
-#### Method 2: CLI command (manual control)
-
-Run the import explicitly using the CLI:
+Import configuration using the CLI:
 
 ```bash
 # Import from a mounted config file (starts a new temporary container)
@@ -89,15 +77,23 @@ Get-Content zerobyte.config.json | docker compose exec -T zerobyte bun run cli i
 
 # Validate config without importing (dry run)
 docker compose run --rm zerobyte bun run cli import-config --config /app/zerobyte.config.json --dry-run
+
+# Get JSON output for scripting
+docker compose exec zerobyte bun run cli import-config --config /app/zerobyte.config.json --json
 ```
 
 The `--stdin` option is useful when you don't want to mount the config file - just pipe it directly.
 
-This is useful when you want to:
-- See import output directly in your terminal
-- Re-run import after fixing issues
-- Test config files before applying them
-- Import without modifying your docker-compose.yml
+### CLI options
+
+| Option | Description |
+|--------|-------------|
+| `--config <path>` | Path to the configuration file inside the container |
+| `--stdin` | Read configuration from stdin |
+| `--dry-run` | Validate the config without importing |
+| `--json` | Output results in JSON format |
+| `--log-level <level>` | Set log level (debug, info, warn, error) |
+| `--overwrite-recovery-key` | Overwrite existing recovery key (only allowed if database is empty) |
 
 ### Secrets via env vars
 
@@ -170,7 +166,7 @@ Supported formats:
 - `env://VAR_NAME` → reads `process.env.VAR_NAME` at runtime
 - `file://secret_name` → reads `/run/secrets/secret_name` (Docker secrets)
 
-This is useful when you want to keep secrets out of the database and rotate them without editing Zerobyte’s stored config.
+This is useful when you want to keep secrets out of the database and rotate them without editing Zerobyte's stored config.
 
 See the runnable example:
 
@@ -178,14 +174,14 @@ See the runnable example:
 
 ### Config file behavior (create-only)
 
-The config file is applied on startup using a **create-only** approach:
+The config file is applied using a **create-only** approach:
 
 - **Volumes, notifications, schedules**: Skipped if a resource with the same name already exists
 - **Repositories**: Skipped if any of these conditions are met:
   - A repository pointing to the same location (path/bucket/endpoint) is already registered
   - For local repos: the path is already a restic repository (set `isExistingRepository: true` to import it)
   - A repository with the same name already exists
-- Changes made via the UI are preserved across container restarts
+- Changes made via the UI are preserved across imports
 - To update a resource from config, either modify it via the UI or delete it first
 
 This makes the config file better suited as "initial setup" than as a "desired state sync".

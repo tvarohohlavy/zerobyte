@@ -1,6 +1,5 @@
 import { eq } from "drizzle-orm";
 import fs from "node:fs/promises";
-import path from "node:path";
 import slugify from "slugify";
 import { db } from "../../db/db";
 import {
@@ -68,23 +67,6 @@ function interpolateEnvVars(value: unknown): unknown {
 		return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, interpolateEnvVars(v)]));
 	}
 	return value;
-}
-
-async function loadConfigFromFile(): Promise<unknown | null> {
-	try {
-		const configPath = process.env.ZEROBYTE_CONFIG_PATH || "zerobyte.config.json";
-		const configFullPath = path.resolve(process.cwd(), configPath);
-		try {
-			const raw = await fs.readFile(configFullPath, "utf-8");
-			return JSON.parse(raw);
-		} catch (error) {
-			if (isRecord(error) && error.code === "ENOENT") return null;
-			throw error;
-		}
-	} catch (error) {
-		logger.warn(`No config file loaded or error parsing config: ${toError(error).message}`);
-		return null;
-	}
 }
 
 function parseImportConfig(configRaw: unknown): ImportConfig {
@@ -837,22 +819,4 @@ export async function applyConfigImport(configRaw: unknown, options: ImportOptio
 	const result = await runImport(config, options);
 	logImportSummary(result);
 	return result;
-}
-
-/**
- * Import configuration from a file (used by env var startup)
- */
-export async function applyConfigImportFromFile(): Promise<void> {
-	const configRaw = await loadConfigFromFile();
-	if (configRaw === null) return; // No config file, nothing to do
-
-	logger.info("Starting config import from file...");
-	const config = parseImportConfig(configRaw);
-
-	try {
-		const result = await runImport(config);
-		logImportSummary(result);
-	} catch (e) {
-		logger.error(`Config import failed: ${toError(e).message}`);
-	}
 }
