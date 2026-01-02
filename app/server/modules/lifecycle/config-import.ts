@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import fs from "node:fs/promises";
 import slugify from "slugify";
+import { type } from "arktype";
 import { db } from "../../db/db";
 import {
 	usersTable,
@@ -15,32 +16,19 @@ import { volumeService } from "../volumes/volume.service";
 import type { NotificationConfig } from "~/schemas/notifications";
 import type { RepositoryConfig } from "~/schemas/restic";
 import type { BackendConfig } from "~/schemas/volumes";
+import {
+	importConfigSchema,
+	type ImportConfig,
+	type VolumeImport,
+	type RepositoryImport,
+	type NotificationDestinationImport,
+	type BackupScheduleImport,
+	type UserImport,
+	type ScheduleNotificationAssignment as ScheduleNotificationImport,
+	type ScheduleMirror as ScheduleMirrorImport,
+} from "~/schemas/config-import";
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
-
-const asStringArray = (value: unknown): string[] => {
-	if (!Array.isArray(value)) return [];
-	return value.filter((item): item is string => typeof item === "string");
-};
-
-type RetentionPolicy = {
-	keepLast?: number;
-	keepHourly?: number;
-	keepDaily?: number;
-	keepWeekly?: number;
-	keepMonthly?: number;
-	keepYearly?: number;
-	keepWithinDuration?: string;
-};
-
-type ImportConfig = {
-	volumes: unknown[];
-	repositories: unknown[];
-	backupSchedules: unknown[];
-	notificationDestinations: unknown[];
-	users: unknown[];
-	recoveryKey: string | null;
-};
 
 export type ImportResult = {
 	succeeded: number;
@@ -68,25 +56,39 @@ function interpolateEnvVars(value: unknown): unknown {
 	return value;
 }
 
-function parseImportConfig(configRaw: unknown): ImportConfig {
+export type ConfigValidationError = {
+	path: string;
+	message: string;
+};
+
+export type ParseConfigResult =
+	| { success: true; config: ImportConfig }
+	| { success: false; errors: ConfigValidationError[] };
+
+/**
+ * Parse and validate import configuration using ArkType schema.
+ * Returns typed config on success or validation errors on failure.
+ */
+function parseImportConfig(configRaw: unknown): ParseConfigResult {
+	// Handle wrapped format: { config: { ... } }
 	const root = isRecord(configRaw) ? configRaw : {};
-	const config = isRecord(root.config) ? (root.config as Record<string, unknown>) : root;
+	const configData = isRecord(root.config) ? root.config : root;
 
-	const volumes = interpolateEnvVars(config.volumes || []);
-	const repositories = interpolateEnvVars(config.repositories || []);
-	const backupSchedules = interpolateEnvVars(config.backupSchedules || []);
-	const notificationDestinations = interpolateEnvVars(config.notificationDestinations || []);
-	const users = interpolateEnvVars(config.users || []);
-	const recoveryKeyRaw = interpolateEnvVars(config.recoveryKey || null);
+	// Interpolate environment variables before validation
+	const interpolated = interpolateEnvVars(configData);
 
-	return {
-		volumes: Array.isArray(volumes) ? volumes : [],
-		repositories: Array.isArray(repositories) ? repositories : [],
-		backupSchedules: Array.isArray(backupSchedules) ? backupSchedules : [],
-		notificationDestinations: Array.isArray(notificationDestinations) ? notificationDestinations : [],
-		users: Array.isArray(users) ? users : [],
-		recoveryKey: typeof recoveryKeyRaw === "string" ? recoveryKeyRaw : null,
-	};
+	// Validate against ArkType schema
+	const result = importConfigSchema(interpolated);
+
+	if (result instanceof type.errors) {
+		const errors: ConfigValidationError[] = result.map((error) => ({
+			path: error.path.join(".") || "(root)",
+			message: error.message,
+		}));
+		return { success: false, errors };
+	}
+
+	return { success: true, config: result };
 }
 
 function mergeResults(target: ImportResult, source: ImportResult): void {
@@ -118,7 +120,7 @@ async function isDatabaseEmpty(): Promise<boolean> {
 }
 
 async function writeRecoveryKeyFromConfig(
-	recoveryKey: string | null,
+	recoveryKey: string | undefined,
 	overwriteRecoveryKey: boolean,
 ): Promise<ImportResult> {
 	const result: ImportResult = { succeeded: 0, skipped: 0, warnings: 0, errors: 0 };
@@ -127,9 +129,6 @@ async function writeRecoveryKeyFromConfig(
 		const { RESTIC_PASS_FILE } = await import("../../core/constants.js");
 		if (!recoveryKey) return result;
 
-		if (typeof recoveryKey !== "string" || recoveryKey.length !== 64 || !/^[a-fA-F0-9]{64}$/.test(recoveryKey)) {
-			throw new Error("Recovery key must be a 64-character hex string");
-		}
 		const passFileExists = await fs.stat(RESTIC_PASS_FILE).then(
 			() => true,
 			() => false,
@@ -175,7 +174,7 @@ async function writeRecoveryKeyFromConfig(
 	return result;
 }
 
-async function importVolumes(volumes: unknown[]): Promise<ImportResult> {
+async function importVolumes(volumes: VolumeImport[]): Promise<ImportResult> {
 	const result: ImportResult = { succeeded: 0, skipped: 0, warnings: 0, errors: 0 };
 
 	// Get existing volumes to check for duplicates
@@ -184,10 +183,6 @@ async function importVolumes(volumes: unknown[]): Promise<ImportResult> {
 
 	for (const v of volumes) {
 		try {
-			if (!isRecord(v) || typeof v.name !== "string" || !isRecord(v.config) || typeof v.config.backend !== "string") {
-				throw new Error("Invalid volume entry");
-			}
-
 			// The service uses slugify to normalize the name, so we check against stored names
 			const slugifiedName = slugify(v.name, { lower: true, strict: true });
 			if (existingNames.has(slugifiedName)) {
@@ -197,8 +192,7 @@ async function importVolumes(volumes: unknown[]): Promise<ImportResult> {
 			}
 
 			// Pass shortId from config if provided (for IaC reproducibility)
-			const shortId = typeof v.shortId === "string" ? v.shortId : undefined;
-			await volumeService.createVolume(v.name, v.config as BackendConfig, shortId);
+			await volumeService.createVolume(v.name, v.config as BackendConfig, v.shortId);
 			logger.info(`Initialized volume from config: ${v.name}`);
 			result.succeeded++;
 
@@ -208,8 +202,7 @@ async function importVolumes(volumes: unknown[]): Promise<ImportResult> {
 				logger.info(`Set autoRemount=false for volume: ${v.name}`);
 			}
 		} catch (e) {
-			const volumeName = isRecord(v) && typeof v.name === "string" ? v.name : "unknown";
-			logger.warn(`Volume '${volumeName}' not created: ${toError(e).message}`);
+			logger.warn(`Volume '${v.name}' not created: ${toError(e).message}`);
 			result.warnings++;
 		}
 	}
@@ -217,7 +210,7 @@ async function importVolumes(volumes: unknown[]): Promise<ImportResult> {
 	return result;
 }
 
-async function importRepositories(repositories: unknown[]): Promise<ImportResult> {
+async function importRepositories(repositories: RepositoryImport[]): Promise<ImportResult> {
 	const result: ImportResult = { succeeded: 0, skipped: 0, warnings: 0, errors: 0 };
 	const repoServiceModule = await import("../repositories/repositories.service");
 	const { buildRepoUrl, restic } = await import("../../utils/restic");
@@ -239,10 +232,6 @@ async function importRepositories(repositories: unknown[]): Promise<ImportResult
 
 	for (const r of repositories) {
 		try {
-			if (!isRecord(r) || typeof r.name !== "string" || !isRecord(r.config) || typeof r.config.backend !== "string") {
-				throw new Error("Invalid repository entry");
-			}
-
 			// Skip if a repository pointing to the same location is already registered in DB
 			try {
 				const incomingUrl = buildRepoUrl(r.config as RepositoryConfig);
@@ -284,23 +273,16 @@ async function importRepositories(repositories: unknown[]): Promise<ImportResult
 				continue;
 			}
 
-			const compressionMode =
-				r.compressionMode === "auto" || r.compressionMode === "off" || r.compressionMode === "max"
-					? r.compressionMode
-					: undefined;
-			// Pass shortId from config if provided (for IaC reproducibility)
-			const shortId = typeof r.shortId === "string" ? r.shortId : undefined;
 			await repoServiceModule.repositoriesService.createRepository(
 				r.name,
 				r.config as RepositoryConfig,
-				compressionMode,
-				shortId,
+				r.compressionMode,
+				r.shortId,
 			);
 			logger.info(`Initialized repository from config: ${r.name}`);
 			result.succeeded++;
 		} catch (e) {
-			const repoName = isRecord(r) && typeof r.name === "string" ? r.name : "unknown";
-			logger.warn(`Repository '${repoName}' not created: ${toError(e).message}`);
+			logger.warn(`Repository '${r.name}' not created: ${toError(e).message}`);
 			result.warnings++;
 		}
 	}
@@ -308,7 +290,9 @@ async function importRepositories(repositories: unknown[]): Promise<ImportResult
 	return result;
 }
 
-async function importNotificationDestinations(notificationDestinations: unknown[]): Promise<ImportResult> {
+async function importNotificationDestinations(
+	notificationDestinations: NotificationDestinationImport[],
+): Promise<ImportResult> {
 	const result: ImportResult = { succeeded: 0, skipped: 0, warnings: 0, errors: 0 };
 	const notificationsServiceModule = await import("../notifications/notifications.service");
 
@@ -318,10 +302,6 @@ async function importNotificationDestinations(notificationDestinations: unknown[
 
 	for (const n of notificationDestinations) {
 		try {
-			if (!isRecord(n) || typeof n.name !== "string" || !isRecord(n.config) || typeof n.config.type !== "string") {
-				throw new Error("Invalid notification destination entry");
-			}
-
 			// The service uses slugify to normalize the name, so we check against stored names
 			const slugifiedName = slugify(n.name, { lower: true, strict: true });
 			if (existingNames.has(slugifiedName)) {
@@ -343,29 +323,12 @@ async function importNotificationDestinations(notificationDestinations: unknown[
 				logger.info(`Set enabled=false for notification destination: ${n.name}`);
 			}
 		} catch (e) {
-			const destName = isRecord(n) && typeof n.name === "string" ? n.name : "unknown";
-			logger.warn(`Notification destination '${destName}' not created: ${toError(e).message}`);
+			logger.warn(`Notification destination '${n.name}' not created: ${toError(e).message}`);
 			result.warnings++;
 		}
 	}
 
 	return result;
-}
-
-function getScheduleVolumeName(schedule: Record<string, unknown>): string | null {
-	return typeof schedule.volume === "string"
-		? schedule.volume
-		: typeof schedule.volumeName === "string"
-			? schedule.volumeName
-			: null;
-}
-
-function getScheduleRepositoryName(schedule: Record<string, unknown>): string | null {
-	return typeof schedule.repository === "string"
-		? schedule.repository
-		: typeof schedule.repositoryName === "string"
-			? schedule.repositoryName
-			: null;
 }
 
 type ScheduleNotificationAssignment = {
@@ -379,19 +342,15 @@ type ScheduleNotificationAssignment = {
 
 function buildScheduleNotificationAssignments(
 	scheduleName: string,
-	notifications: unknown[],
+	notifications: ScheduleNotificationImport[],
 	destinationBySlug: Map<string, { id: number; name: string }>,
 ): { assignments: ScheduleNotificationAssignment[]; warnings: number } {
 	const assignments: ScheduleNotificationAssignment[] = [];
 	let warnings = 0;
 
 	for (const notif of notifications) {
-		const destName = typeof notif === "string" ? notif : isRecord(notif) ? notif.name : null;
-		if (typeof destName !== "string" || destName.length === 0) {
-			logger.warn(`Notification destination missing name for schedule '${scheduleName}'`);
-			warnings++;
-			continue;
-		}
+		// Handle both string (name only) and object (with settings) formats
+		const destName = typeof notif === "string" ? notif : notif.name;
 		const destSlug = slugify(destName, { lower: true, strict: true });
 		const dest = destinationBySlug.get(destSlug);
 		if (!dest) {
@@ -402,10 +361,10 @@ function buildScheduleNotificationAssignments(
 		assignments.push({
 			destinationId: dest.id,
 			destinationName: dest.name,
-			notifyOnStart: isRecord(notif) && typeof notif.notifyOnStart === "boolean" ? notif.notifyOnStart : true,
-			notifyOnSuccess: isRecord(notif) && typeof notif.notifyOnSuccess === "boolean" ? notif.notifyOnSuccess : true,
-			notifyOnWarning: isRecord(notif) && typeof notif.notifyOnWarning === "boolean" ? notif.notifyOnWarning : true,
-			notifyOnFailure: isRecord(notif) && typeof notif.notifyOnFailure === "boolean" ? notif.notifyOnFailure : true,
+			notifyOnStart: typeof notif === "object" && notif.notifyOnStart !== undefined ? notif.notifyOnStart : true,
+			notifyOnSuccess: typeof notif === "object" && notif.notifyOnSuccess !== undefined ? notif.notifyOnSuccess : true,
+			notifyOnWarning: typeof notif === "object" && notif.notifyOnWarning !== undefined ? notif.notifyOnWarning : true,
+			notifyOnFailure: typeof notif === "object" && notif.notifyOnFailure !== undefined ? notif.notifyOnFailure : true,
 		});
 	}
 
@@ -415,7 +374,7 @@ function buildScheduleNotificationAssignments(
 async function attachScheduleNotifications(
 	scheduleId: number,
 	scheduleName: string,
-	notifications: unknown[],
+	notifications: ScheduleNotificationImport[],
 	destinationBySlug: Map<string, { id: number; name: string }>,
 	notificationsServiceModule: typeof import("../notifications/notifications.service"),
 ): Promise<ImportResult> {
@@ -467,9 +426,9 @@ async function attachScheduleNotifications(
 	return result;
 }
 
-async function importBackupSchedules(backupSchedules: unknown[]): Promise<ImportResult> {
+async function importBackupSchedules(backupSchedules: BackupScheduleImport[]): Promise<ImportResult> {
 	const result: ImportResult = { succeeded: 0, skipped: 0, warnings: 0, errors: 0 };
-	if (!Array.isArray(backupSchedules) || backupSchedules.length === 0) return result;
+	if (backupSchedules.length === 0) return result;
 
 	const backupServiceModule = await import("../backups/backups.service");
 	const notificationsServiceModule = await import("../notifications/notifications.service");
@@ -485,44 +444,23 @@ async function importBackupSchedules(backupSchedules: unknown[]): Promise<Import
 	const scheduleByName = new Map(existingSchedules.map((s) => [s.name, s] as const));
 
 	for (const s of backupSchedules) {
-		if (!isRecord(s)) {
-			continue;
-		}
-		const volumeName = getScheduleVolumeName(s);
-		if (typeof volumeName !== "string" || volumeName.length === 0) {
-			logger.warn("Backup schedule not processed: Missing volume name");
-			result.warnings++;
-			continue;
-		}
-		// Volume names are stored slugified
-		const volumeSlug = slugify(volumeName, { lower: true, strict: true });
+		const volumeSlug = slugify(s.volume, { lower: true, strict: true });
 		const volume = volumeByName.get(volumeSlug);
 		if (!volume) {
-			logger.warn(`Backup schedule not processed: Volume '${volumeName}' not found`);
+			logger.warn(`Backup schedule not processed: Volume '${s.volume}' not found`);
 			result.warnings++;
 			continue;
 		}
 
-		const repositoryName = getScheduleRepositoryName(s);
-		if (typeof repositoryName !== "string" || repositoryName.length === 0) {
-			logger.warn("Backup schedule not processed: Missing repository name");
-			result.warnings++;
-			continue;
-		}
 		// Repository names are stored trimmed
-		const repository = repoByName.get(repositoryName.trim());
+		const repository = repoByName.get(s.repository.trim());
 		if (!repository) {
-			logger.warn(`Backup schedule not processed: Repository '${repositoryName}' not found`);
+			logger.warn(`Backup schedule not processed: Repository '${s.repository}' not found`);
 			result.warnings++;
 			continue;
 		}
 
-		const scheduleName = typeof s.name === "string" && s.name.length > 0 ? s.name : `${volumeName}-${repositoryName}`;
-		if (typeof s.cronExpression !== "string" || s.cronExpression.length === 0) {
-			logger.warn(`Backup schedule not processed: Missing cronExpression for '${scheduleName}'`);
-			result.warnings++;
-			continue;
-		}
+		const scheduleName = s.name && s.name.length > 0 ? s.name : `${s.volume}-${s.repository}`;
 
 		// Check if schedule already exists - if so, skip creation but still try attachments
 		const existingSchedule = scheduleByName.get(scheduleName);
@@ -547,23 +485,20 @@ async function importBackupSchedules(backupSchedules: unknown[]): Promise<Import
 			}
 
 			try {
-				const retentionPolicy = isRecord(s.retentionPolicy) ? (s.retentionPolicy as RetentionPolicy) : undefined;
-				// Pass shortId from config if provided (for IaC reproducibility)
-				const providedShortId = typeof s.shortId === "string" ? s.shortId : undefined;
 				const createdSchedule = await backupServiceModule.backupsService.createSchedule(
 					{
 						name: scheduleName,
 						volumeId: volume.id,
 						repositoryId: repository.id,
-						enabled: typeof s.enabled === "boolean" ? s.enabled : true,
+						enabled: s.enabled ?? true,
 						cronExpression: s.cronExpression,
-						retentionPolicy,
-						excludePatterns: asStringArray(s.excludePatterns),
-						excludeIfPresent: asStringArray(s.excludeIfPresent),
-						includePatterns: asStringArray(s.includePatterns),
-						oneFileSystem: typeof s.oneFileSystem === "boolean" ? s.oneFileSystem : undefined,
+						retentionPolicy: s.retentionPolicy ?? undefined, // null -> undefined
+						excludePatterns: s.excludePatterns ?? [],
+						excludeIfPresent: s.excludeIfPresent ?? [],
+						includePatterns: s.includePatterns ?? [],
+						oneFileSystem: s.oneFileSystem,
 					},
-					providedShortId,
+					s.shortId,
 				);
 				logger.info(`Initialized backup schedule from config: ${scheduleName}`);
 				result.succeeded++;
@@ -606,7 +541,7 @@ async function importBackupSchedules(backupSchedules: unknown[]): Promise<Import
 async function attachScheduleMirrors(
 	scheduleId: number,
 	scheduleName: string,
-	mirrors: unknown[],
+	mirrors: ScheduleMirrorImport[],
 	repoByName: Map<string, { id: string; name: string; config: RepositoryConfig }>,
 	backupServiceModule: typeof import("../backups/backups.service"),
 ): Promise<ImportResult> {
@@ -622,34 +557,18 @@ async function attachScheduleMirrors(
 		}> = [];
 
 		for (const m of mirrors) {
-			if (!isRecord(m)) continue;
-
-			// Support both repository name (string) and repository object with name
-			const repoName =
-				typeof m.repository === "string"
-					? m.repository
-					: typeof m.repositoryName === "string"
-						? m.repositoryName
-						: null;
-
-			if (!repoName) {
-				logger.warn(`Mirror missing repository name for schedule '${scheduleName}'`);
-				result.warnings++;
-				continue;
-			}
-
-			// Repository names are stored trimmed
-			const repo = repoByName.get(repoName.trim());
+			// Schema ensures repository is a non-empty string
+			const repo = repoByName.get(m.repository.trim());
 			if (!repo) {
-				logger.warn(`Mirror repository '${repoName}' not found for schedule '${scheduleName}'`);
+				logger.warn(`Mirror repository '${m.repository}' not found for schedule '${scheduleName}'`);
 				result.warnings++;
 				continue;
 			}
 
 			mirrorConfigs.push({
 				repositoryId: repo.id,
-				repositoryName: repo.name,
-				enabled: typeof m.enabled === "boolean" ? m.enabled : true,
+				repositoryName: m.repository,
+				enabled: m.enabled ?? true,
 			});
 		}
 
@@ -685,20 +604,20 @@ async function attachScheduleMirrors(
 	return result;
 }
 
-async function importUsers(users: unknown[], recoveryKey: string | null): Promise<ImportResult> {
+async function importUsers(users: UserImport[], recoveryKey: string | undefined): Promise<ImportResult> {
 	const result: ImportResult = { succeeded: 0, skipped: 0, warnings: 0, errors: 0 };
 
 	try {
 		const { authService } = await import("../auth/auth.service");
 		const hasUsers = await authService.hasUsers();
 		if (hasUsers) {
-			if (Array.isArray(users) && users.length > 0) {
+			if (users.length > 0) {
 				logger.info("Users already exist; skipping user import from config");
 				result.skipped++;
 			}
 			return result;
 		}
-		if (!Array.isArray(users) || users.length === 0) return result;
+		if (users.length === 0) return result;
 
 		if (users.length > 1) {
 			logger.warn(
@@ -708,24 +627,12 @@ async function importUsers(users: unknown[], recoveryKey: string | null): Promis
 		}
 
 		for (const u of users) {
-			if (!isRecord(u)) {
-				logger.warn("Invalid user entry in config; skipping");
-				result.warnings++;
-				continue;
-			}
-			if (typeof u.username !== "string" || u.username.length === 0) {
-				logger.warn("User entry missing username; skipping");
-				result.warnings++;
-				continue;
-			}
-
-			if (typeof u.passwordHash === "string" && u.passwordHash.length > 0) {
+			if (u.passwordHash) {
 				try {
 					await db.insert(usersTable).values({
 						username: u.username,
 						passwordHash: u.passwordHash,
-						hasDownloadedResticPassword:
-							typeof u.hasDownloadedResticPassword === "boolean" ? u.hasDownloadedResticPassword : Boolean(recoveryKey),
+						hasDownloadedResticPassword: u.hasDownloadedResticPassword ?? Boolean(recoveryKey),
 					});
 					logger.info(`User '${u.username}' imported with password hash from config.`);
 					result.succeeded++;
@@ -738,11 +645,10 @@ async function importUsers(users: unknown[], recoveryKey: string | null): Promis
 				continue;
 			}
 
-			if (typeof u.password === "string" && u.password.length > 0) {
+			if (u.password) {
 				try {
 					const { user } = await authService.register(u.username, u.password);
-					const hasDownloadedResticPassword =
-						typeof u.hasDownloadedResticPassword === "boolean" ? u.hasDownloadedResticPassword : Boolean(recoveryKey);
+					const hasDownloadedResticPassword = u.hasDownloadedResticPassword ?? Boolean(recoveryKey);
 					if (hasDownloadedResticPassword) {
 						await db.update(usersTable).set({ hasDownloadedResticPassword }).where(eq(usersTable.id, user.id));
 					}
@@ -783,11 +689,11 @@ async function runImport(config: ImportConfig, options: ImportOptions = {}): Pro
 		return result;
 	}
 
-	mergeResults(result, await importVolumes(config.volumes));
-	mergeResults(result, await importRepositories(config.repositories));
-	mergeResults(result, await importNotificationDestinations(config.notificationDestinations));
-	mergeResults(result, await importBackupSchedules(config.backupSchedules));
-	mergeResults(result, await importUsers(config.users, config.recoveryKey));
+	mergeResults(result, await importVolumes(config.volumes ?? []));
+	mergeResults(result, await importRepositories(config.repositories ?? []));
+	mergeResults(result, await importNotificationDestinations(config.notificationDestinations ?? []));
+	mergeResults(result, await importBackupSchedules(config.backupSchedules ?? []));
+	mergeResults(result, await importUsers(config.users ?? [], config.recoveryKey));
 
 	return result;
 }
@@ -809,13 +715,34 @@ function logImportSummary(result: ImportResult): void {
 	}
 }
 
+export type ApplyConfigResult =
+	| { success: true; result: ImportResult }
+	| { success: false; validationErrors: ConfigValidationError[] };
+
 /**
  * Import configuration from a raw config object (used by CLI)
+ * Returns validation errors upfront if the config doesn't match the schema.
  */
-export async function applyConfigImport(configRaw: unknown, options: ImportOptions = {}): Promise<ImportResult> {
+export async function applyConfigImport(configRaw: unknown, options: ImportOptions = {}): Promise<ApplyConfigResult> {
 	logger.info("Starting config import...");
-	const config = parseImportConfig(configRaw);
-	const result = await runImport(config, options);
+
+	const parseResult = parseImportConfig(configRaw);
+	if (!parseResult.success) {
+		for (const error of parseResult.errors) {
+			logger.error(`Validation error at ${error.path}: ${error.message}`);
+		}
+		return { success: false, validationErrors: parseResult.errors };
+	}
+
+	const result = await runImport(parseResult.config, options);
 	logImportSummary(result);
-	return result;
+	return { success: true, result };
+}
+
+/**
+ * Validate configuration without importing (used by CLI --dry-run)
+ * Returns validation errors if the config doesn't match the schema.
+ */
+export function validateConfig(configRaw: unknown): ParseConfigResult {
+	return parseImportConfig(configRaw);
 }

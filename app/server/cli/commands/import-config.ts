@@ -104,27 +104,41 @@ export const importConfigCommand = new Command("import-config")
 		}
 
 		if (options.dryRun) {
-			const root = typeof config === "object" && config !== null ? config : {};
-			const configObj =
-				"config" in root && typeof root.config === "object" && root.config !== null ? root.config : root;
+			const { validateConfig } = await import("../../modules/lifecycle/config-import");
+			const validation = validateConfig(config);
 
-			const sections = ["volumes", "repositories", "backupSchedules", "notificationDestinations", "users"];
-			const counts: Record<string, number> = {};
-			for (const section of sections) {
-				const items = (configObj as Record<string, unknown>)[section] || [];
-				counts[section] = Array.isArray(items) ? items.length : 0;
+			if (!validation.success) {
+				if (jsonOutput) {
+					out.json({ dryRun: true, valid: false, validationErrors: validation.errors });
+				} else {
+					console.log("🔍 Dry run mode - validating config\n");
+					console.log("❌ Validation errors:");
+					for (const error of validation.errors) {
+						console.log(`   • ${error.path}: ${error.message}`);
+					}
+				}
+				process.exit(1);
 			}
-			const hasRecoveryKey = !!(configObj as Record<string, unknown>).recoveryKey;
+
+			const { config: validConfig } = validation;
+			const counts = {
+				volumes: validConfig.volumes?.length ?? 0,
+				repositories: validConfig.repositories?.length ?? 0,
+				backupSchedules: validConfig.backupSchedules?.length ?? 0,
+				notificationDestinations: validConfig.notificationDestinations?.length ?? 0,
+				users: validConfig.users?.length ?? 0,
+			};
+			const hasRecoveryKey = !!validConfig.recoveryKey;
 
 			if (jsonOutput) {
 				out.json({ dryRun: true, valid: true, counts, hasRecoveryKey });
 			} else {
-				console.log("🔍 Dry run mode - validating config only\n");
-				for (const section of sections) {
-					console.log(`   ${section}: ${counts[section]} item(s)`);
+				console.log("🔍 Dry run mode - validating config\n");
+				for (const [section, count] of Object.entries(counts)) {
+					console.log(`   ${section}: ${count} item(s)`);
 				}
 				console.log(`   recoveryKey: ${hasRecoveryKey ? "provided" : "not provided"}`);
-				console.log("\n✅ Config is valid JSON");
+				console.log("\n✅ Config is valid");
 			}
 			return;
 		}
@@ -135,8 +149,21 @@ export const importConfigCommand = new Command("import-config")
 			runDbMigrations();
 
 			const { applyConfigImport } = await import("../../modules/lifecycle/config-import");
-			const result = await applyConfigImport(config, { overwriteRecoveryKey: options.overwriteRecoveryKey });
+			const importResult = await applyConfigImport(config, { overwriteRecoveryKey: options.overwriteRecoveryKey });
 
+			if (!importResult.success) {
+				if (jsonOutput) {
+					out.json({ success: false, validationErrors: importResult.validationErrors });
+				} else {
+					console.log("❌ Validation errors:");
+					for (const error of importResult.validationErrors) {
+						console.log(`   • ${error.path}: ${error.message}`);
+					}
+				}
+				process.exit(1);
+			}
+
+			const { result } = importResult;
 			out.json({ ...result, success: result.errors === 0 });
 
 			// Exit with error code if there were errors

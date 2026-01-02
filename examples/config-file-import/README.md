@@ -416,7 +416,7 @@ Note: The `path` must point directly to the restic repository root (the director
   "notifications": ["slack-alerts", "email-admin"],
   "mirrors": [
     { "repository": "s3-repo" },
-    { "repository": "lo2" }
+    { "repository": "azure-repo" }
   ]
 }
 ```
@@ -459,7 +459,7 @@ Each mirror references a repository by name:
 ```json
 "mirrors": [
   { "repository": "s3-repo" },
-  { "repository": "lo2", "enabled": false }
+  { "repository": "azure-repo", "enabled": false }
 ]
 ```
 
