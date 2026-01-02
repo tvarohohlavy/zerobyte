@@ -69,6 +69,7 @@ export const importConfigCommand = new Command("import-config")
 	.option("--dry-run", "Validate the config without importing")
 	.option("--json", "Output results in JSON format")
 	.option("--log-level <level>", "Set log level (debug, info, warn, error)")
+	.option("--overwrite-recovery-key", "Overwrite existing recovery key (only allowed if database is empty)")
 	.action(async (options) => {
 		const jsonOutput = options.json;
 		const out = createOutput(jsonOutput);
@@ -135,7 +136,7 @@ export const importConfigCommand = new Command("import-config")
 			runDbMigrations();
 
 			const { applyConfigImport } = await import("../../modules/lifecycle/config-import");
-			const result = await applyConfigImport(config);
+			const result = await applyConfigImport(config, { overwriteRecoveryKey: options.overwriteRecoveryKey });
 
 			out.json({ ...result, success: result.errors === 0 });
 

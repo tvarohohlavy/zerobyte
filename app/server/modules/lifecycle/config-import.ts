@@ -3,7 +3,13 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import slugify from "slugify";
 import { db } from "../../db/db";
-import { usersTable } from "../../db/schema";
+import {
+	usersTable,
+	volumesTable,
+	repositoriesTable,
+	backupSchedulesTable,
+	notificationDestinationsTable,
+} from "../../db/schema";
 import { logger } from "../../utils/logger";
 import { volumeService } from "../volumes/volume.service";
 import type { NotificationConfig } from "~/schemas/notifications";
@@ -109,7 +115,31 @@ function mergeResults(target: ImportResult, source: ImportResult): void {
 	target.errors += source.errors;
 }
 
-async function writeRecoveryKeyFromConfig(recoveryKey: string | null): Promise<ImportResult> {
+/**
+ * Check if the database has any records in the main tables.
+ * Used to prevent recovery key overwrite when data already exists.
+ */
+async function isDatabaseEmpty(): Promise<boolean> {
+	const [volumes, repositories, schedules, notifications, users] = await Promise.all([
+		db.select({ id: volumesTable.id }).from(volumesTable).limit(1),
+		db.select({ id: repositoriesTable.id }).from(repositoriesTable).limit(1),
+		db.select({ id: backupSchedulesTable.id }).from(backupSchedulesTable).limit(1),
+		db.select({ id: notificationDestinationsTable.id }).from(notificationDestinationsTable).limit(1),
+		db.select({ id: usersTable.id }).from(usersTable).limit(1),
+	]);
+	return (
+		volumes.length === 0 &&
+		repositories.length === 0 &&
+		schedules.length === 0 &&
+		notifications.length === 0 &&
+		users.length === 0
+	);
+}
+
+async function writeRecoveryKeyFromConfig(
+	recoveryKey: string | null,
+	overwriteRecoveryKey: boolean,
+): Promise<ImportResult> {
 	const result: ImportResult = { succeeded: 0, skipped: 0, warnings: 0, errors: 0 };
 
 	try {
@@ -129,11 +159,29 @@ async function writeRecoveryKeyFromConfig(recoveryKey: string | null): Promise<I
 			if (existingKey.trim() === recoveryKey) {
 				logger.info("Recovery key already configured with matching value");
 				result.skipped++;
-			} else {
-				logger.error("Recovery key already exists with different value; cannot overwrite");
-				result.errors++;
+				return result;
 			}
-			return result;
+
+			// Key exists with different value - check if overwrite is allowed
+			if (!overwriteRecoveryKey) {
+				logger.error("Recovery key already exists with different value; use --overwrite-recovery-key to replace");
+				result.errors++;
+				return result;
+			}
+
+			// Overwrite requested - verify database is empty for safety
+			const dbEmpty = await isDatabaseEmpty();
+			if (!dbEmpty) {
+				logger.error(
+					"Cannot overwrite recovery key: database contains existing records. " +
+						"Overwriting the recovery key would make existing backups unrecoverable.",
+				);
+				result.errors++;
+				return result;
+			}
+
+			// Safe to overwrite - database is empty
+			logger.warn("Overwriting existing recovery key (database is empty)");
 		}
 		await fs.writeFile(RESTIC_PASS_FILE, recoveryKey, { mode: 0o600 });
 		logger.info(`Recovery key written from config to ${RESTIC_PASS_FILE}`);
@@ -740,10 +788,14 @@ async function importUsers(users: unknown[], recoveryKey: string | null): Promis
 	return result;
 }
 
-async function runImport(config: ImportConfig): Promise<ImportResult> {
+type ImportOptions = {
+	overwriteRecoveryKey?: boolean;
+};
+
+async function runImport(config: ImportConfig, options: ImportOptions = {}): Promise<ImportResult> {
 	const result: ImportResult = { succeeded: 0, skipped: 0, warnings: 0, errors: 0 };
 
-	mergeResults(result, await writeRecoveryKeyFromConfig(config.recoveryKey));
+	mergeResults(result, await writeRecoveryKeyFromConfig(config.recoveryKey, options.overwriteRecoveryKey ?? false));
 
 	// Stop immediately if recovery key has errors (e.g., mismatch with existing key)
 	if (result.errors > 0) {
@@ -779,10 +831,10 @@ function logImportSummary(result: ImportResult): void {
 /**
  * Import configuration from a raw config object (used by CLI)
  */
-export async function applyConfigImport(configRaw: unknown): Promise<ImportResult> {
+export async function applyConfigImport(configRaw: unknown, options: ImportOptions = {}): Promise<ImportResult> {
 	logger.info("Starting config import...");
 	const config = parseImportConfig(configRaw);
-	const result = await runImport(config);
+	const result = await runImport(config, options);
 	logImportSummary(result);
 	return result;
 }
