@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { eq, or } from "drizzle-orm";
-import { ConflictError, InternalServerError, NotFoundError } from "http-errors-enhanced";
+import { BadRequestError, ConflictError, InternalServerError, NotFoundError } from "http-errors-enhanced";
 import { db } from "../../db/db";
 import { repositoriesTable } from "../../db/schema";
 import { toMessage } from "../../utils/errors";
@@ -74,7 +74,7 @@ const createRepository = async (
 	let shortId: string;
 	if (providedShortId) {
 		if (!isValidShortId(providedShortId)) {
-			throw new Error(`Invalid shortId format: '${providedShortId}'. Must be 8 base64url characters.`);
+			throw new BadRequestError(`Invalid shortId format: '${providedShortId}'. Must be 8 base64url characters.`);
 		}
 		const shortIdInUse = await db.query.repositoriesTable.findFirst({
 			where: eq(repositoriesTable.shortId, providedShortId),
@@ -109,7 +109,7 @@ const createRepository = async (
 	}
 
 	if (!repoExists && config.isExistingRepository) {
-		throw new InternalServerError(
+		throw new BadRequestError(
 			`Cannot access existing repository. Verify the path/credentials are correct and the repository exists.`,
 		);
 	}

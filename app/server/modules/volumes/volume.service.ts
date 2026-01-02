@@ -2,7 +2,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { and, eq, ne } from "drizzle-orm";
-import { ConflictError, InternalServerError, NotFoundError } from "http-errors-enhanced";
+import { BadRequestError, ConflictError, InternalServerError, NotFoundError } from "http-errors-enhanced";
 import slugify from "slugify";
 import { db } from "../../db/db";
 import { volumesTable } from "../../db/schema";
@@ -63,7 +63,7 @@ const createVolume = async (name: string, backendConfig: BackendConfig, provided
 	let shortId: string;
 	if (providedShortId) {
 		if (!isValidShortId(providedShortId)) {
-			throw new Error(`Invalid shortId format: '${providedShortId}'. Must be 8 base64url characters.`);
+			throw new BadRequestError(`Invalid shortId format: '${providedShortId}'. Must be 8 base64url characters.`);
 		}
 		const shortIdInUse = await db.query.volumesTable.findFirst({
 			where: eq(volumesTable.shortId, providedShortId),
