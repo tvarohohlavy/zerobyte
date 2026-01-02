@@ -21,6 +21,8 @@ export type RegisterResponses = {
     201: {
         message: string;
         success: boolean;
+        pendingSessionId?: string;
+        requiresTwoFactor?: boolean;
         user?: {
             hasDownloadedResticPassword: boolean;
             id: number;
@@ -48,6 +50,8 @@ export type LoginResponses = {
     200: {
         message: string;
         success: boolean;
+        pendingSessionId?: string;
+        requiresTwoFactor?: boolean;
         user?: {
             hasDownloadedResticPassword: boolean;
             id: number;
@@ -57,6 +61,40 @@ export type LoginResponses = {
 };
 
 export type LoginResponse = LoginResponses[keyof LoginResponses];
+
+export type Verify2FaData = {
+    body?: {
+        code: string;
+        pendingSessionId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/verify-2fa';
+};
+
+export type Verify2FaErrors = {
+    /**
+     * Invalid 2FA code or session
+     */
+    401: unknown;
+};
+
+export type Verify2FaResponses = {
+    /**
+     * 2FA verification successful
+     */
+    200: {
+        message: string;
+        success: boolean;
+        user?: {
+            hasDownloadedResticPassword: boolean;
+            id: number;
+            username: string;
+        };
+    };
+};
+
+export type Verify2FaResponse = Verify2FaResponses[keyof Verify2FaResponses];
 
 export type LogoutData = {
     body?: never;
@@ -90,6 +128,8 @@ export type GetMeResponses = {
     200: {
         message: string;
         success: boolean;
+        pendingSessionId?: string;
+        requiresTwoFactor?: boolean;
         user?: {
             hasDownloadedResticPassword: boolean;
             id: number;
@@ -139,6 +179,130 @@ export type ChangePasswordResponses = {
 };
 
 export type ChangePasswordResponse = ChangePasswordResponses[keyof ChangePasswordResponses];
+
+export type GetTwoFactorStatusData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/2fa-status';
+};
+
+export type GetTwoFactorStatusErrors = {
+    /**
+     * Not authenticated
+     */
+    401: unknown;
+};
+
+export type GetTwoFactorStatusResponses = {
+    /**
+     * 2FA status
+     */
+    200: {
+        enabled: boolean;
+    };
+};
+
+export type GetTwoFactorStatusResponse = GetTwoFactorStatusResponses[keyof GetTwoFactorStatusResponses];
+
+export type Setup2FaData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/2fa/setup';
+};
+
+export type Setup2FaErrors = {
+    /**
+     * 2FA already enabled or other error
+     */
+    400: unknown;
+    /**
+     * Not authenticated
+     */
+    401: unknown;
+};
+
+export type Setup2FaResponses = {
+    /**
+     * 2FA setup data
+     */
+    200: {
+        message: string;
+        success: boolean;
+        secret?: string;
+        uri?: string;
+    };
+};
+
+export type Setup2FaResponse = Setup2FaResponses[keyof Setup2FaResponses];
+
+export type Enable2FaData = {
+    body?: {
+        code: string;
+        password: string;
+        secret: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/2fa/enable';
+};
+
+export type Enable2FaErrors = {
+    /**
+     * Invalid code or 2FA already enabled
+     */
+    400: unknown;
+    /**
+     * Not authenticated
+     */
+    401: unknown;
+};
+
+export type Enable2FaResponses = {
+    /**
+     * 2FA enabled successfully
+     */
+    200: {
+        message: string;
+        success: boolean;
+    };
+};
+
+export type Enable2FaResponse = Enable2FaResponses[keyof Enable2FaResponses];
+
+export type Disable2FaData = {
+    body?: {
+        code: string;
+        password: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/2fa/disable';
+};
+
+export type Disable2FaErrors = {
+    /**
+     * Invalid password or code, or 2FA not enabled
+     */
+    400: unknown;
+    /**
+     * Not authenticated
+     */
+    401: unknown;
+};
+
+export type Disable2FaResponses = {
+    /**
+     * 2FA disabled successfully
+     */
+    200: {
+        message: string;
+        success: boolean;
+    };
+};
+
+export type Disable2FaResponse = Disable2FaResponses[keyof Disable2FaResponses];
 
 export type ListVolumesData = {
     body?: never;
@@ -2164,6 +2328,7 @@ export type GetScheduleNotificationsResponses = {
                 priority: 'default' | 'high' | 'low' | 'max' | 'min';
                 topic: string;
                 type: 'ntfy';
+                accessToken?: string;
                 password?: string;
                 serverUrl?: string;
                 username?: string;
@@ -2263,6 +2428,7 @@ export type UpdateScheduleNotificationsResponses = {
                 priority: 'default' | 'high' | 'low' | 'max' | 'min';
                 topic: string;
                 type: 'ntfy';
+                accessToken?: string;
                 password?: string;
                 serverUrl?: string;
                 username?: string;
@@ -2599,6 +2765,7 @@ export type ListNotificationDestinationsResponses = {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
@@ -2669,6 +2836,7 @@ export type CreateNotificationDestinationData = {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
@@ -2738,6 +2906,7 @@ export type CreateNotificationDestinationResponses = {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
@@ -2854,6 +3023,7 @@ export type GetNotificationDestinationResponses = {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
@@ -2924,6 +3094,7 @@ export type UpdateNotificationDestinationData = {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
@@ -3003,6 +3174,7 @@ export type UpdateNotificationDestinationResponses = {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
