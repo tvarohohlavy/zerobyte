@@ -104,7 +104,7 @@ See [examples/README.md](examples/README.md) for runnable, copy/paste-friendly e
 
 ### Config file import (Infrastructure as Code)
 
-If you want Zerobyte to create volumes, repositories, schedules, notification destinations, and an initial user from a JSON file on startup, check the following example:
+If you want Zerobyte to create volumes, repositories, schedules, notification destinations, and an initial user from a JSON file, check the following example:
 
 - [examples/config-file-import/README.md](examples/config-file-import/README.md)
 
