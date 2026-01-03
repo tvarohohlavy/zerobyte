@@ -798,7 +798,9 @@ export type ListRepositoriesResponses = {
             bucket: string;
             endpoint: string;
             secretAccessKey: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
         } | {
             accessKeyId: string;
@@ -806,39 +808,51 @@ export type ListRepositoriesResponses = {
             bucket: string;
             endpoint: string;
             secretAccessKey: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
         } | {
             accountKey: string;
             accountName: string;
             backend: 'azure';
             container: string;
+            cacert?: string;
             customPassword?: string;
             endpointSuffix?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
         } | {
             backend: 'gcs';
             bucket: string;
             credentialsJson: string;
             projectId: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
         } | {
             backend: 'local';
             name: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
             path?: string;
         } | {
             backend: 'rclone';
             path: string;
             remote: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
         } | {
             backend: 'rest';
             url: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
             password?: string;
             path?: string;
@@ -851,7 +865,9 @@ export type ListRepositoriesResponses = {
             user: string;
             port?: number;
             skipHostKeyCheck?: boolean;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
             knownHosts?: string;
         };
@@ -877,7 +893,9 @@ export type CreateRepositoryData = {
             bucket: string;
             endpoint: string;
             secretAccessKey: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
         } | {
             accessKeyId: string;
@@ -885,39 +903,51 @@ export type CreateRepositoryData = {
             bucket: string;
             endpoint: string;
             secretAccessKey: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
         } | {
             accountKey: string;
             accountName: string;
             backend: 'azure';
             container: string;
+            cacert?: string;
             customPassword?: string;
             endpointSuffix?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
         } | {
             backend: 'gcs';
             bucket: string;
             credentialsJson: string;
             projectId: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
         } | {
             backend: 'local';
             name: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
             path?: string;
         } | {
             backend: 'rclone';
             path: string;
             remote: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
         } | {
             backend: 'rest';
             url: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
             password?: string;
             path?: string;
@@ -930,7 +960,9 @@ export type CreateRepositoryData = {
             user: string;
             port?: number;
             skipHostKeyCheck?: boolean;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
             knownHosts?: string;
         };
@@ -1018,7 +1050,9 @@ export type GetRepositoryResponses = {
             bucket: string;
             endpoint: string;
             secretAccessKey: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
         } | {
             accessKeyId: string;
@@ -1026,39 +1060,51 @@ export type GetRepositoryResponses = {
             bucket: string;
             endpoint: string;
             secretAccessKey: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
         } | {
             accountKey: string;
             accountName: string;
             backend: 'azure';
             container: string;
+            cacert?: string;
             customPassword?: string;
             endpointSuffix?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
         } | {
             backend: 'gcs';
             bucket: string;
             credentialsJson: string;
             projectId: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
         } | {
             backend: 'local';
             name: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
             path?: string;
         } | {
             backend: 'rclone';
             path: string;
             remote: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
         } | {
             backend: 'rest';
             url: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
             password?: string;
             path?: string;
@@ -1071,7 +1117,9 @@ export type GetRepositoryResponses = {
             user: string;
             port?: number;
             skipHostKeyCheck?: boolean;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
             knownHosts?: string;
         };
@@ -1124,7 +1172,9 @@ export type UpdateRepositoryResponses = {
             bucket: string;
             endpoint: string;
             secretAccessKey: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
         } | {
             accessKeyId: string;
@@ -1132,39 +1182,51 @@ export type UpdateRepositoryResponses = {
             bucket: string;
             endpoint: string;
             secretAccessKey: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
         } | {
             accountKey: string;
             accountName: string;
             backend: 'azure';
             container: string;
+            cacert?: string;
             customPassword?: string;
             endpointSuffix?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
         } | {
             backend: 'gcs';
             bucket: string;
             credentialsJson: string;
             projectId: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
         } | {
             backend: 'local';
             name: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
             path?: string;
         } | {
             backend: 'rclone';
             path: string;
             remote: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
         } | {
             backend: 'rest';
             url: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
             password?: string;
             path?: string;
@@ -1177,7 +1239,9 @@ export type UpdateRepositoryResponses = {
             user: string;
             port?: number;
             skipHostKeyCheck?: boolean;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
             knownHosts?: string;
         };
@@ -1194,6 +1258,28 @@ export type UpdateRepositoryResponses = {
 };
 
 export type UpdateRepositoryResponse = UpdateRepositoryResponses[keyof UpdateRepositoryResponses];
+
+export type DeleteSnapshotsData = {
+    body?: {
+        snapshotIds: Array<string>;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/repositories/{id}/snapshots';
+};
+
+export type DeleteSnapshotsResponses = {
+    /**
+     * Snapshots deleted successfully
+     */
+    200: {
+        message: string;
+    };
+};
+
+export type DeleteSnapshotsResponse = DeleteSnapshotsResponses[keyof DeleteSnapshotsResponses];
 
 export type ListSnapshotsData = {
     body?: never;
@@ -1367,6 +1453,31 @@ export type DoctorRepositoryResponses = {
 
 export type DoctorRepositoryResponse = DoctorRepositoryResponses[keyof DoctorRepositoryResponses];
 
+export type TagSnapshotsData = {
+    body?: {
+        snapshotIds: Array<string>;
+        add?: Array<string>;
+        remove?: Array<string>;
+        set?: Array<string>;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/repositories/{id}/snapshots/tag';
+};
+
+export type TagSnapshotsResponses = {
+    /**
+     * Snapshots tagged successfully
+     */
+    200: {
+        message: string;
+    };
+};
+
+export type TagSnapshotsResponse = TagSnapshotsResponses[keyof TagSnapshotsResponses];
+
 export type ListBackupSchedulesData = {
     body?: never;
     path?: never;
@@ -1400,7 +1511,9 @@ export type ListBackupSchedulesResponses = {
                 bucket: string;
                 endpoint: string;
                 secretAccessKey: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 accessKeyId: string;
@@ -1408,39 +1521,51 @@ export type ListBackupSchedulesResponses = {
                 bucket: string;
                 endpoint: string;
                 secretAccessKey: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 accountKey: string;
                 accountName: string;
                 backend: 'azure';
                 container: string;
+                cacert?: string;
                 customPassword?: string;
                 endpointSuffix?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 backend: 'gcs';
                 bucket: string;
                 credentialsJson: string;
                 projectId: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 backend: 'local';
                 name: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 path?: string;
             } | {
                 backend: 'rclone';
                 path: string;
                 remote: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 backend: 'rest';
                 url: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 password?: string;
                 path?: string;
@@ -1453,7 +1578,9 @@ export type ListBackupSchedulesResponses = {
                 user: string;
                 port?: number;
                 skipHostKeyCheck?: boolean;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 knownHosts?: string;
             };
@@ -1662,7 +1789,9 @@ export type GetBackupScheduleResponses = {
                 bucket: string;
                 endpoint: string;
                 secretAccessKey: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 accessKeyId: string;
@@ -1670,39 +1799,51 @@ export type GetBackupScheduleResponses = {
                 bucket: string;
                 endpoint: string;
                 secretAccessKey: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 accountKey: string;
                 accountName: string;
                 backend: 'azure';
                 container: string;
+                cacert?: string;
                 customPassword?: string;
                 endpointSuffix?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 backend: 'gcs';
                 bucket: string;
                 credentialsJson: string;
                 projectId: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 backend: 'local';
                 name: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 path?: string;
             } | {
                 backend: 'rclone';
                 path: string;
                 remote: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 backend: 'rest';
                 url: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 password?: string;
                 path?: string;
@@ -1715,7 +1856,9 @@ export type GetBackupScheduleResponses = {
                 user: string;
                 port?: number;
                 skipHostKeyCheck?: boolean;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 knownHosts?: string;
             };
@@ -1905,7 +2048,9 @@ export type GetBackupScheduleForVolumeResponses = {
                 bucket: string;
                 endpoint: string;
                 secretAccessKey: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 accessKeyId: string;
@@ -1913,39 +2058,51 @@ export type GetBackupScheduleForVolumeResponses = {
                 bucket: string;
                 endpoint: string;
                 secretAccessKey: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 accountKey: string;
                 accountName: string;
                 backend: 'azure';
                 container: string;
+                cacert?: string;
                 customPassword?: string;
                 endpointSuffix?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 backend: 'gcs';
                 bucket: string;
                 credentialsJson: string;
                 projectId: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 backend: 'local';
                 name: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 path?: string;
             } | {
                 backend: 'rclone';
                 path: string;
                 remote: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 backend: 'rest';
                 url: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 password?: string;
                 path?: string;
@@ -1958,7 +2115,9 @@ export type GetBackupScheduleForVolumeResponses = {
                 user: string;
                 port?: number;
                 skipHostKeyCheck?: boolean;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 knownHosts?: string;
             };
@@ -2152,9 +2311,19 @@ export type GetScheduleNotificationsResponses = {
                 password?: string;
                 username?: string;
             } | {
+                method: 'GET' | 'POST';
+                type: 'generic';
+                url: string;
+                contentType?: string;
+                headers?: Array<string>;
+                messageKey?: string;
+                titleKey?: string;
+                useJson?: boolean;
+            } | {
                 priority: 'default' | 'high' | 'low' | 'max' | 'min';
                 topic: string;
                 type: 'ntfy';
+                accessToken?: string;
                 password?: string;
                 serverUrl?: string;
                 username?: string;
@@ -2184,7 +2353,7 @@ export type GetScheduleNotificationsResponses = {
             enabled: boolean;
             id: number;
             name: string;
-            type: 'custom' | 'discord' | 'email' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
+            type: 'custom' | 'discord' | 'email' | 'generic' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
             updatedAt: number;
         };
         destinationId: number;
@@ -2242,9 +2411,19 @@ export type UpdateScheduleNotificationsResponses = {
                 password?: string;
                 username?: string;
             } | {
+                method: 'GET' | 'POST';
+                type: 'generic';
+                url: string;
+                contentType?: string;
+                headers?: Array<string>;
+                messageKey?: string;
+                titleKey?: string;
+                useJson?: boolean;
+            } | {
                 priority: 'default' | 'high' | 'low' | 'max' | 'min';
                 topic: string;
                 type: 'ntfy';
+                accessToken?: string;
                 password?: string;
                 serverUrl?: string;
                 username?: string;
@@ -2274,7 +2453,7 @@ export type UpdateScheduleNotificationsResponses = {
             enabled: boolean;
             id: number;
             name: string;
-            type: 'custom' | 'discord' | 'email' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
+            type: 'custom' | 'discord' | 'email' | 'generic' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
             updatedAt: number;
         };
         destinationId: number;
@@ -2315,7 +2494,9 @@ export type GetScheduleMirrorsResponses = {
                 bucket: string;
                 endpoint: string;
                 secretAccessKey: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 accessKeyId: string;
@@ -2323,39 +2504,51 @@ export type GetScheduleMirrorsResponses = {
                 bucket: string;
                 endpoint: string;
                 secretAccessKey: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 accountKey: string;
                 accountName: string;
                 backend: 'azure';
                 container: string;
+                cacert?: string;
                 customPassword?: string;
                 endpointSuffix?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 backend: 'gcs';
                 bucket: string;
                 credentialsJson: string;
                 projectId: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 backend: 'local';
                 name: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 path?: string;
             } | {
                 backend: 'rclone';
                 path: string;
                 remote: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 backend: 'rest';
                 url: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 password?: string;
                 path?: string;
@@ -2368,7 +2561,9 @@ export type GetScheduleMirrorsResponses = {
                 user: string;
                 port?: number;
                 skipHostKeyCheck?: boolean;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 knownHosts?: string;
             };
@@ -2421,7 +2616,9 @@ export type UpdateScheduleMirrorsResponses = {
                 bucket: string;
                 endpoint: string;
                 secretAccessKey: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 accessKeyId: string;
@@ -2429,39 +2626,51 @@ export type UpdateScheduleMirrorsResponses = {
                 bucket: string;
                 endpoint: string;
                 secretAccessKey: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 accountKey: string;
                 accountName: string;
                 backend: 'azure';
                 container: string;
+                cacert?: string;
                 customPassword?: string;
                 endpointSuffix?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 backend: 'gcs';
                 bucket: string;
                 credentialsJson: string;
                 projectId: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 backend: 'local';
                 name: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 path?: string;
             } | {
                 backend: 'rclone';
                 path: string;
                 remote: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
             } | {
                 backend: 'rest';
                 url: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 password?: string;
                 path?: string;
@@ -2474,7 +2683,9 @@ export type UpdateScheduleMirrorsResponses = {
                 user: string;
                 port?: number;
                 skipHostKeyCheck?: boolean;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 knownHosts?: string;
             };
@@ -2569,9 +2780,19 @@ export type ListNotificationDestinationsResponses = {
             password?: string;
             username?: string;
         } | {
+            method: 'GET' | 'POST';
+            type: 'generic';
+            url: string;
+            contentType?: string;
+            headers?: Array<string>;
+            messageKey?: string;
+            titleKey?: string;
+            useJson?: boolean;
+        } | {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
@@ -2601,7 +2822,7 @@ export type ListNotificationDestinationsResponses = {
         enabled: boolean;
         id: number;
         name: string;
-        type: 'custom' | 'discord' | 'email' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
+        type: 'custom' | 'discord' | 'email' | 'generic' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
         updatedAt: number;
     }>;
 };
@@ -2630,9 +2851,19 @@ export type CreateNotificationDestinationData = {
             password?: string;
             username?: string;
         } | {
+            method: 'GET' | 'POST';
+            type: 'generic';
+            url: string;
+            contentType?: string;
+            headers?: Array<string>;
+            messageKey?: string;
+            titleKey?: string;
+            useJson?: boolean;
+        } | {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
@@ -2690,9 +2921,19 @@ export type CreateNotificationDestinationResponses = {
             password?: string;
             username?: string;
         } | {
+            method: 'GET' | 'POST';
+            type: 'generic';
+            url: string;
+            contentType?: string;
+            headers?: Array<string>;
+            messageKey?: string;
+            titleKey?: string;
+            useJson?: boolean;
+        } | {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
@@ -2722,7 +2963,7 @@ export type CreateNotificationDestinationResponses = {
         enabled: boolean;
         id: number;
         name: string;
-        type: 'custom' | 'discord' | 'email' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
+        type: 'custom' | 'discord' | 'email' | 'generic' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
         updatedAt: number;
     };
 };
@@ -2797,9 +3038,19 @@ export type GetNotificationDestinationResponses = {
             password?: string;
             username?: string;
         } | {
+            method: 'GET' | 'POST';
+            type: 'generic';
+            url: string;
+            contentType?: string;
+            headers?: Array<string>;
+            messageKey?: string;
+            titleKey?: string;
+            useJson?: boolean;
+        } | {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
@@ -2829,7 +3080,7 @@ export type GetNotificationDestinationResponses = {
         enabled: boolean;
         id: number;
         name: string;
-        type: 'custom' | 'discord' | 'email' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
+        type: 'custom' | 'discord' | 'email' | 'generic' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
         updatedAt: number;
     };
 };
@@ -2858,9 +3109,19 @@ export type UpdateNotificationDestinationData = {
             password?: string;
             username?: string;
         } | {
+            method: 'GET' | 'POST';
+            type: 'generic';
+            url: string;
+            contentType?: string;
+            headers?: Array<string>;
+            messageKey?: string;
+            titleKey?: string;
+            useJson?: boolean;
+        } | {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
@@ -2928,9 +3189,19 @@ export type UpdateNotificationDestinationResponses = {
             password?: string;
             username?: string;
         } | {
+            method: 'GET' | 'POST';
+            type: 'generic';
+            url: string;
+            contentType?: string;
+            headers?: Array<string>;
+            messageKey?: string;
+            titleKey?: string;
+            useJson?: boolean;
+        } | {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
@@ -2960,7 +3231,7 @@ export type UpdateNotificationDestinationResponses = {
         enabled: boolean;
         id: number;
         name: string;
-        type: 'custom' | 'discord' | 'email' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
+        type: 'custom' | 'discord' | 'email' | 'generic' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
         updatedAt: number;
     };
 };
