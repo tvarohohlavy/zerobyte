@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { eq } from "drizzle-orm";
 import { db } from "../../db/db";
 import { sessionsTable, usersTable } from "../../db/schema";
+import { logger } from "../../utils/logger";
 
 const disableTwoFactor = async (username: string): Promise<void> => {
 	const [user] = await db.select().from(usersTable).where(eq(usersTable.username, username));
@@ -26,6 +27,8 @@ const disableTwoFactor = async (username: string): Promise<void> => {
 
 		await tx.delete(sessionsTable).where(eq(sessionsTable.userId, user.id));
 	});
+
+	logger.warn(`2FA disabled via CLI for user: ${username}`);
 
 	console.log(`\n✅ 2FA has been disabled for user "${username}".`);
 	console.log("   All existing sessions have been invalidated.");
