@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { BrowseFilesystemData, BrowseFilesystemResponses, CreateBackupScheduleData, CreateBackupScheduleResponses, CreateNotificationDestinationData, CreateNotificationDestinationResponses, CreateRepositoryData, CreateRepositoryResponses, CreateVolumeData, CreateVolumeResponses, DeleteBackupScheduleData, DeleteBackupScheduleResponses, DeleteNotificationDestinationData, DeleteNotificationDestinationErrors, DeleteNotificationDestinationResponses, DeleteRepositoryData, DeleteRepositoryResponses, DeleteSnapshotData, DeleteSnapshotResponses, DeleteVolumeData, DeleteVolumeResponses, Disable2FaData, Disable2FaErrors, Disable2FaResponses, DoctorRepositoryData, DoctorRepositoryResponses, DownloadResticPasswordData, DownloadResticPasswordResponses, Enable2FaData, Enable2FaErrors, Enable2FaResponses, GetBackupScheduleData, GetBackupScheduleForVolumeData, GetBackupScheduleForVolumeResponses, GetBackupScheduleResponses, GetMeData, GetMeResponses, GetMirrorCompatibilityData, GetMirrorCompatibilityResponses, GetNotificationDestinationData, GetNotificationDestinationErrors, GetNotificationDestinationResponses, GetRepositoryData, GetRepositoryResponses, GetScheduleMirrorsData, GetScheduleMirrorsResponses, GetScheduleNotificationsData, GetScheduleNotificationsResponses, GetSnapshotDetailsData, GetSnapshotDetailsResponses, GetStatusData, GetStatusResponses, GetSystemInfoData, GetSystemInfoResponses, GetTwoFactorStatusData, GetTwoFactorStatusErrors, GetTwoFactorStatusResponses, GetVolumeData, GetVolumeErrors, GetVolumeResponses, HealthCheckVolumeData, HealthCheckVolumeErrors, HealthCheckVolumeResponses, ChangePasswordData, ChangePasswordResponses, ListBackupSchedulesData, ListBackupSchedulesResponses, ListFilesData, ListFilesResponses, ListNotificationDestinationsData, ListNotificationDestinationsResponses, ListRcloneRemotesData, ListRcloneRemotesResponses, ListRepositoriesData, ListRepositoriesResponses, ListSnapshotFilesData, ListSnapshotFilesResponses, ListSnapshotsData, ListSnapshotsResponses, ListVolumesData, ListVolumesResponses, LoginData, LoginResponses, LogoutData, LogoutResponses, MountVolumeData, MountVolumeResponses, RegisterData, RegisterResponses, ReorderBackupSchedulesData, ReorderBackupSchedulesResponses, RestoreSnapshotData, RestoreSnapshotResponses, RunBackupNowData, RunBackupNowResponses, RunForgetData, RunForgetResponses, Setup2FaData, Setup2FaErrors, Setup2FaResponses, StopBackupData, StopBackupErrors, StopBackupResponses, TestConnectionData, TestConnectionResponses, TestNotificationDestinationData, TestNotificationDestinationErrors, TestNotificationDestinationResponses, UnmountVolumeData, UnmountVolumeResponses, UpdateBackupScheduleData, UpdateBackupScheduleResponses, UpdateNotificationDestinationData, UpdateNotificationDestinationErrors, UpdateNotificationDestinationResponses, UpdateRepositoryData, UpdateRepositoryErrors, UpdateRepositoryResponses, UpdateScheduleMirrorsData, UpdateScheduleMirrorsResponses, UpdateScheduleNotificationsData, UpdateScheduleNotificationsResponses, UpdateVolumeData, UpdateVolumeErrors, UpdateVolumeResponses, Verify2FaData, Verify2FaErrors, Verify2FaResponses } from './types.gen';
+import type { BrowseFilesystemData, BrowseFilesystemResponses, CreateBackupScheduleData, CreateBackupScheduleResponses, CreateNotificationDestinationData, CreateNotificationDestinationResponses, CreateRepositoryData, CreateRepositoryResponses, CreateVolumeData, CreateVolumeResponses, DeleteBackupScheduleData, DeleteBackupScheduleResponses, DeleteNotificationDestinationData, DeleteNotificationDestinationErrors, DeleteNotificationDestinationResponses, DeleteRepositoryData, DeleteRepositoryResponses, DeleteSnapshotData, DeleteSnapshotResponses, DeleteSnapshotsData, DeleteSnapshotsResponses, DeleteVolumeData, DeleteVolumeResponses, Disable2FaData, Disable2FaErrors, Disable2FaResponses, DoctorRepositoryData, DoctorRepositoryResponses, DownloadResticPasswordData, DownloadResticPasswordResponses, Enable2FaData, Enable2FaErrors, Enable2FaResponses, GetBackupScheduleData, GetBackupScheduleForVolumeData, GetBackupScheduleForVolumeResponses, GetBackupScheduleResponses, GetMeData, GetMeResponses, GetMirrorCompatibilityData, GetMirrorCompatibilityResponses, GetNotificationDestinationData, GetNotificationDestinationErrors, GetNotificationDestinationResponses, GetRepositoryData, GetRepositoryResponses, GetScheduleMirrorsData, GetScheduleMirrorsResponses, GetScheduleNotificationsData, GetScheduleNotificationsResponses, GetSnapshotDetailsData, GetSnapshotDetailsResponses, GetStatusData, GetStatusResponses, GetSystemInfoData, GetSystemInfoResponses, GetTwoFactorStatusData, GetTwoFactorStatusErrors, GetTwoFactorStatusResponses, GetVolumeData, GetVolumeErrors, GetVolumeResponses, HealthCheckVolumeData, HealthCheckVolumeErrors, HealthCheckVolumeResponses, ChangePasswordData, ChangePasswordResponses, ListBackupSchedulesData, ListBackupSchedulesResponses, ListFilesData, ListFilesResponses, ListNotificationDestinationsData, ListNotificationDestinationsResponses, ListRcloneRemotesData, ListRcloneRemotesResponses, ListRepositoriesData, ListRepositoriesResponses, ListSnapshotFilesData, ListSnapshotFilesResponses, ListSnapshotsData, ListSnapshotsResponses, ListVolumesData, ListVolumesResponses, LoginData, LoginResponses, LogoutData, LogoutResponses, MountVolumeData, MountVolumeResponses, RegisterData, RegisterResponses, ReorderBackupSchedulesData, ReorderBackupSchedulesResponses, RestoreSnapshotData, RestoreSnapshotResponses, RunBackupNowData, RunBackupNowResponses, RunForgetData, RunForgetResponses, Setup2FaData, Setup2FaErrors, Setup2FaResponses, StopBackupData, StopBackupErrors, StopBackupResponses, TagSnapshotsData, TagSnapshotsResponses, TestConnectionData, TestConnectionResponses, TestNotificationDestinationData, TestNotificationDestinationErrors, TestNotificationDestinationResponses, UnmountVolumeData, UnmountVolumeResponses, UpdateBackupScheduleData, UpdateBackupScheduleResponses, UpdateNotificationDestinationData, UpdateNotificationDestinationErrors, UpdateNotificationDestinationResponses, UpdateRepositoryData, UpdateRepositoryErrors, UpdateRepositoryResponses, UpdateScheduleMirrorsData, UpdateScheduleMirrorsResponses, UpdateScheduleNotificationsData, UpdateScheduleNotificationsResponses, UpdateVolumeData, UpdateVolumeErrors, UpdateVolumeResponses, Verify2FaData, Verify2FaErrors, Verify2FaResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -236,6 +236,18 @@ export const updateRepository = <ThrowOnError extends boolean = false>(options: 
 });
 
 /**
+ * Delete multiple snapshots from a repository
+ */
+export const deleteSnapshots = <ThrowOnError extends boolean = false>(options: Options<DeleteSnapshotsData, ThrowOnError>) => (options.client ?? client).delete<DeleteSnapshotsResponses, unknown, ThrowOnError>({
+    url: '/api/v1/repositories/{id}/snapshots',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * List all snapshots in a repository
  */
 export const listSnapshots = <ThrowOnError extends boolean = false>(options: Options<ListSnapshotsData, ThrowOnError>) => (options.client ?? client).get<ListSnapshotsResponses, unknown, ThrowOnError>({ url: '/api/v1/repositories/{id}/snapshots', ...options });
@@ -271,6 +283,18 @@ export const restoreSnapshot = <ThrowOnError extends boolean = false>(options: O
  * Run doctor operations on a repository to fix common issues (unlock, check, repair index). Use this when the repository is locked or has errors.
  */
 export const doctorRepository = <ThrowOnError extends boolean = false>(options: Options<DoctorRepositoryData, ThrowOnError>) => (options.client ?? client).post<DoctorRepositoryResponses, unknown, ThrowOnError>({ url: '/api/v1/repositories/{id}/doctor', ...options });
+
+/**
+ * Tag multiple snapshots in a repository
+ */
+export const tagSnapshots = <ThrowOnError extends boolean = false>(options: Options<TagSnapshotsData, ThrowOnError>) => (options.client ?? client).post<TagSnapshotsResponses, unknown, ThrowOnError>({
+    url: '/api/v1/repositories/{id}/snapshots/tag',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * List all backup schedules
