@@ -162,7 +162,7 @@ It is **not required** for SMB/CIFS mounts.
 
 ### Rclone mount issues
 
-When using `rclone` you are getting errors like:
+When using `rclone`, you may get errors like:
 
 ```bash
 bun: Failed to spawn process: EACCES
