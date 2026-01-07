@@ -263,6 +263,10 @@ Zerobyte allows you to easily restore your data from backups. To restore data, n
 
 ![Preview](https://github.com/nicotsx/zerobyte/blob/main/screenshots/restoring.png?raw=true)
 
+## Troubleshooting
+
+For troubleshooting common issues, please refer to the [TROUBLESHOOTING.md](TROUBLESHOOTING.md) file.
+
 ## Third-Party Software
 
 This project includes the following third-party software components:
