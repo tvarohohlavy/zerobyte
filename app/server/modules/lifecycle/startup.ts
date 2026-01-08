@@ -50,6 +50,9 @@ export const startup = async () => {
 		logger.error(`Error ensuring restic passfile exists: ${err.message}`);
 	});
 
+	const { initAuth } = await import("~/lib/auth");
+	await initAuth();
+
 	await ensureLatestConfigurationSchema();
 
 	const volumes = await db.query.volumesTable.findMany({

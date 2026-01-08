@@ -14,36 +14,57 @@ import { ensureOnlyOneUser } from "./auth-middlewares/only-one-user";
 
 export type AuthMiddlewareContext = MiddlewareContext<MiddlewareOptions, AuthContext<BetterAuthOptions>>;
 
-export const auth = betterAuth({
-	secret: await cryptoUtils.deriveSecret("better-auth"),
-	hooks: {
-		before: createAuthMiddleware(async (ctx) => {
-			await ensureOnlyOneUser(ctx);
-			await convertLegacyUserOnFirstLogin(ctx);
+let _auth: ReturnType<typeof betterAuth> | null = null;
+
+const createAuth = async () => {
+	if (_auth) return _auth;
+
+	_auth = betterAuth({
+		secret: await cryptoUtils.deriveSecret("better-auth"),
+		hooks: {
+			before: createAuthMiddleware(async (ctx) => {
+				await ensureOnlyOneUser(ctx);
+				await convertLegacyUserOnFirstLogin(ctx);
+			}),
+		},
+		database: drizzleAdapter(db, {
+			provider: "sqlite",
 		}),
-	},
-	database: drizzleAdapter(db, {
-		provider: "sqlite",
-	}),
-	emailAndPassword: {
-		enabled: true,
-	},
-	user: {
-		modelName: "usersTable",
-		additionalFields: {
-			username: {
-				type: "string",
-				returned: true,
-				required: true,
-			},
-			hasDownloadedResticPassword: {
-				type: "boolean",
-				returned: true,
+		emailAndPassword: {
+			enabled: true,
+		},
+		user: {
+			modelName: "usersTable",
+			additionalFields: {
+				username: {
+					type: "string",
+					returned: true,
+					required: true,
+				},
+				hasDownloadedResticPassword: {
+					type: "boolean",
+					returned: true,
+				},
 			},
 		},
+		session: {
+			modelName: "sessionsTable",
+		},
+		plugins: [username({})],
+	});
+
+	return _auth;
+};
+
+export const auth = {
+	get api() {
+		if (!_auth) throw new Error("Auth not initialized. Call initAuth() first.");
+		return _auth.api;
 	},
-	session: {
-		modelName: "sessionsTable",
+	get handler() {
+		if (!_auth) throw new Error("Auth not initialized. Call initAuth() first.");
+		return _auth.handler;
 	},
-	plugins: [username({})],
-});
+};
+
+export const initAuth = createAuth;
