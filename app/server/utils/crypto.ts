@@ -3,6 +3,9 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { RESTIC_PASS_FILE } from "../core/constants";
 import { isNodeJSErrnoException } from "./fs";
+import { promisify } from "node:util";
+
+const hkdf = promisify(crypto.hkdf);
 
 const algorithm = "aes-256-gcm" as const;
 const keyLength = 32;
@@ -227,9 +230,17 @@ const resolveSecretsDeep = async <T>(input: T): Promise<T> => {
 
 	return resolve(input) as Promise<T>;
 };
+async function deriveSecret(label: string) {
+	const masterSecret = await Bun.file(RESTIC_PASS_FILE).text();
+
+	const derivedKey = await hkdf("sha256", masterSecret, "", label, 32);
+
+	return Buffer.from(derivedKey).toString("hex");
+}
 
 export const cryptoUtils = {
 	resolveSecret,
 	sealSecret,
 	resolveSecretsDeep,
+	deriveSecret,
 };

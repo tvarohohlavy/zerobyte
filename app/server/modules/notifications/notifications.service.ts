@@ -320,18 +320,16 @@ function buildNotificationMessage(
 		snapshotId?: string;
 	},
 ) {
-	const date = new Date().toLocaleDateString();
-	const time = new Date().toLocaleTimeString();
+	const backupName = context.scheduleName ?? "backup";
 
 	switch (event) {
 		case "start":
 			return {
-				title: "🔵 Backup Started",
+				title: `Zerobyte ${backupName} started`,
 				body: [
 					`Volume: ${context.volumeName}`,
 					`Repository: ${context.repositoryName}`,
 					context.scheduleName ? `Schedule: ${context.scheduleName}` : null,
-					`Time: ${date} - ${time}`,
 				]
 					.filter(Boolean)
 					.join("\n"),
@@ -339,7 +337,7 @@ function buildNotificationMessage(
 
 		case "success":
 			return {
-				title: "✅ Backup Completed successfully",
+				title: `Zerobyte ${backupName} completed successfully`,
 				body: [
 					`Volume: ${context.volumeName}`,
 					`Repository: ${context.repositoryName}`,
@@ -348,7 +346,6 @@ function buildNotificationMessage(
 					context.filesProcessed !== undefined ? `Files: ${context.filesProcessed}` : null,
 					context.bytesProcessed ? `Size: ${context.bytesProcessed}` : null,
 					context.snapshotId ? `Snapshot: ${context.snapshotId}` : null,
-					`Time: ${date} - ${time}`,
 				]
 					.filter(Boolean)
 					.join("\n"),
@@ -356,7 +353,7 @@ function buildNotificationMessage(
 
 		case "warning":
 			return {
-				title: "! Backup completed with warnings",
+				title: `Zerobyte ${backupName} completed with warnings`,
 				body: [
 					`Volume: ${context.volumeName}`,
 					`Repository: ${context.repositoryName}`,
@@ -366,7 +363,6 @@ function buildNotificationMessage(
 					context.bytesProcessed ? `Size: ${context.bytesProcessed}` : null,
 					context.snapshotId ? `Snapshot: ${context.snapshotId}` : null,
 					context.error ? `Warning: ${context.error}` : null,
-					`Time: ${date} - ${time}`,
 				]
 					.filter(Boolean)
 					.join("\n"),
@@ -374,13 +370,12 @@ function buildNotificationMessage(
 
 		case "failure":
 			return {
-				title: "❌ Backup failed",
+				title: `Zerobyte ${backupName} failed`,
 				body: [
 					`Volume: ${context.volumeName}`,
 					`Repository: ${context.repositoryName}`,
 					context.scheduleName ? `Schedule: ${context.scheduleName}` : null,
 					context.error ? `Error: ${context.error}` : null,
-					`Time: ${date} - ${time}`,
 				]
 					.filter(Boolean)
 					.join("\n"),
@@ -388,12 +383,11 @@ function buildNotificationMessage(
 
 		default:
 			return {
-				title: "Backup Notification",
+				title: `Zerobyte ${backupName} notification`,
 				body: [
 					`Volume: ${context.volumeName}`,
 					`Repository: ${context.repositoryName}`,
 					context.scheduleName ? `Schedule: ${context.scheduleName}` : null,
-					`Time: ${date} - ${time}`,
 				]
 					.filter(Boolean)
 					.join("\n"),
