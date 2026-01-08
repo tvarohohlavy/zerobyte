@@ -47,6 +47,9 @@ const createBetterAuth = (secret: string) =>
 			modelName: "sessionsTable",
 		},
 		plugins: [username({})],
+		advanced: {
+			disableOriginCheck: true,
+		},
 	});
 
 type Auth = ReturnType<typeof createBetterAuth>;
